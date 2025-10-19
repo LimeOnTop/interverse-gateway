@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	common "github.com/inter-verse/services/api-gateway/proto"
-	pb "github.com/inter-verse/services/api-gateway/proto"
+	pb "github.com/inter-verse/services/interview-service/gen"
+	common "github.com/inter-verse/services/proto/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

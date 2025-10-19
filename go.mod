@@ -1,12 +1,20 @@
 module github.com/inter-verse/services/api-gateway
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/inter-verse/services/api-gateway/proto v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/candidate-service/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/interview-service/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/proto/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/question-service/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/report-service/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/technology-service/gen v0.0.0-00010101000000-000000000000
+	github.com/inter-verse/services/user-service/gen v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
-	google.golang.org/grpc v1.59.0
+	google.golang.org/grpc v1.76.0
 )
 
 require (
@@ -18,7 +26,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
@@ -29,13 +36,25 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/inter-verse/services/api-gateway/proto => ./proto
+replace github.com/inter-verse/services/proto/gen => ../proto/gen
+
+replace github.com/inter-verse/services/user-service/gen => ../user-service/gen
+
+replace github.com/inter-verse/services/interview-service/gen => ../interview-service/gen
+
+replace github.com/inter-verse/services/candidate-service/gen => ../candidate-service/gen
+
+replace github.com/inter-verse/services/report-service/gen => ../report-service/gen
+
+replace github.com/inter-verse/services/technology-service/gen => ../technology-service/gen
+
+replace github.com/inter-verse/services/question-service/gen => ../question-service/gen

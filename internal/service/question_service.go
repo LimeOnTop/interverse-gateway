@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	common "github.com/inter-verse/services/api-gateway/proto"
-	pb "github.com/inter-verse/services/api-gateway/proto"
+	common "github.com/inter-verse/services/proto/gen"
+	pb "github.com/inter-verse/services/question-service/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
