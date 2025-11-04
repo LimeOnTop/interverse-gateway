@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	common "github.com/inter-verse/services/proto/gen"
-	pb "github.com/inter-verse/services/report-service/gen"
+	pb "github.com/inter-verse/report-service/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -54,7 +53,7 @@ func (s *ReportService) GetReports(interviewerID, page, limit string) (interface
 
 	req := &pb.GetReportsRequest{
 		InterviewerId: interviewerID,
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},

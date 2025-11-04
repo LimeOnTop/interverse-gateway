@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	common "github.com/inter-verse/services/proto/gen"
-	pb "github.com/inter-verse/services/question-service/gen"
+	pb "github.com/inter-verse/question-service/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -30,7 +29,7 @@ func (s *QuestionService) GetQuestions(page, limit string) (interface{}, error) 
 	limitInt, _ := strconv.ParseInt(limit, 10, 32)
 
 	req := &pb.GetQuestionsRequest{
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},
@@ -113,7 +112,7 @@ func (s *QuestionService) SearchQuestions(query, page, limit string) (interface{
 
 	req := &pb.SearchQuestionsRequest{
 		Query: query,
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},
@@ -134,7 +133,7 @@ func (s *QuestionService) GetQuestionsByTechnology(technology, difficulty, page,
 	req := &pb.GetQuestionsByTechnologyRequest{
 		Technology: technology,
 		Difficulty: difficulty,
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},

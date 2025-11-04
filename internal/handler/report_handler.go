@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/inter-verse/services/api-gateway/internal/service"
+	"github.com/inter-verse/api-gateway/internal/service"
 )
 
 type ReportHandler struct {

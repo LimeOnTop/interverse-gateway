@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/inter-verse/services/api-gateway/internal/config"
-	"github.com/inter-verse/services/api-gateway/internal/handler"
-	"github.com/inter-verse/services/api-gateway/internal/middleware"
-	"github.com/inter-verse/services/api-gateway/internal/service"
+	"github.com/inter-verse/api-gateway/internal/config"
+	"github.com/inter-verse/api-gateway/internal/handler"
+	"github.com/inter-verse/api-gateway/internal/middleware"
+	"github.com/inter-verse/api-gateway/internal/service"
 )
 
 func main() {

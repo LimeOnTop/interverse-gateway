@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/inter-verse/services/interview-service/gen"
-	common "github.com/inter-verse/services/proto/gen"
+	pb "github.com/inter-verse/interview-service/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -47,7 +46,7 @@ func (s *InterviewService) CreateInterview(title, description, candidateID, spec
 func (s *InterviewService) GetInterviews(page, limit, status string) (interface{}, error) {
 	req := &pb.GetInterviewsRequest{
 		InterviewerId: "550e8400-e29b-41d4-a716-446655440000", // TODO: Get from auth context
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  1,  // TODO: parse page
 			Limit: 10, // TODO: parse limit
 		},

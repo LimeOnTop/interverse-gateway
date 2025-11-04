@@ -6,23 +6,20 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git
 
-# Copy common proto files first
-COPY services/proto/ ./services/proto/
-
 # Copy gen directories for all services
-COPY services/user-service/gen/ ./services/user-service/gen/
-COPY services/interview-service/gen/ ./services/interview-service/gen/
-COPY services/candidate-service/gen/ ./services/candidate-service/gen/
-COPY services/report-service/gen/ ./services/report-service/gen/
-COPY services/technology-service/gen/ ./services/technology-service/gen/
-COPY services/question-service/gen/ ./services/question-service/gen/
+COPY user-service/gen/ ./services/user-service/gen/
+COPY interview-service/gen/ ./services/interview-service/gen/
+COPY candidate-service/gen/ ./services/candidate-service/gen/
+COPY report-service/gen/ ./services/report-service/gen/
+COPY technology-service/gen/ ./services/technology-service/gen/
+COPY question-service/gen/ ./services/question-service/gen/
 
 # Copy go mod files
-COPY services/api-gateway/go.mod services/api-gateway/go.sum ./
+COPY api-gateway/go.mod api-gateway/go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY services/api-gateway/ ./
+COPY api-gateway/ ./
 
 # Update dependencies and build
 RUN go mod tidy

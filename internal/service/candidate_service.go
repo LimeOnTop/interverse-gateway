@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	pb "github.com/inter-verse/services/candidate-service/gen"
-	common "github.com/inter-verse/services/proto/gen"
+	pb "github.com/inter-verse/candidate-service/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -53,7 +52,7 @@ func (s *CandidateService) GetCandidates(interviewerID, page, limit string) (int
 
 	req := &pb.GetCandidatesRequest{
 		InterviewerId: interviewerID,
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},
@@ -123,7 +122,7 @@ func (s *CandidateService) SearchCandidates(query, interviewerID, page, limit st
 	req := &pb.SearchCandidatesRequest{
 		Query:         query,
 		InterviewerId: interviewerID,
-		Pagination: &common.Pagination{
+		Pagination: &pb.Pagination{
 			Page:  int32(pageInt),
 			Limit: int32(limitInt),
 		},
