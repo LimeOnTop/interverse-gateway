@@ -7,12 +7,12 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 # Copy gen directories for all services
-COPY user-service/gen/ ./services/user-service/gen/
-COPY interview-service/gen/ ./services/interview-service/gen/
-COPY candidate-service/gen/ ./services/candidate-service/gen/
-COPY report-service/gen/ ./services/report-service/gen/
-COPY technology-service/gen/ ./services/technology-service/gen/
-COPY question-service/gen/ ./services/question-service/gen/
+COPY user-service/gen/ ./user-service/gen/
+COPY interview-service/gen/ ./interview-service/gen/
+COPY candidate-service/gen/ ./candidate-service/gen/
+COPY report-service/gen/ ./report-service/gen/
+COPY technology-service/gen/ ./technology-service/gen/
+COPY question-service/gen/ ./question-service/gen/
 
 # Copy go mod files
 COPY api-gateway/go.mod api-gateway/go.sum ./

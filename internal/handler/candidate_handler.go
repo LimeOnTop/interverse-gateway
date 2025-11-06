@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/inter-verse/api-gateway/internal/service"
+	pb "github.com/inter-verse/candidate-service/gen"
 )
 
 type CandidateHandler struct {
@@ -19,15 +21,15 @@ func NewCandidateHandler(candidateService *service.CandidateService) *CandidateH
 
 func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 	var req struct {
-		Name        string `json:"name" binding:"required"`
-		Email       string `json:"email" binding:"required,email"`
-		Phone       string `json:"phone"`
-		Position    string `json:"position"`
-		Experience  string `json:"experience"`
-		Skills      string `json:"skills"`
-		ResumeURL   string `json:"resume_url"`
-		LinkedinURL string `json:"linkedin_url"`
-		GithubURL   string `json:"github_url"`
+		Name        string      `json:"name" binding:"required"`
+		Email       string      `json:"email" binding:"required,email"`
+		Phone       string      `json:"phone"`
+		Position    string      `json:"position"`
+		Experience  interface{} `json:"experience"`
+		Skills      string      `json:"skills"`
+		ResumeURL   string      `json:"resume_url"`
+		LinkedinURL string      `json:"linkedin_url"`
+		GithubURL   string      `json:"github_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,11 +37,26 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 		return
 	}
 
+	// Convert experience to string
+	experienceStr := ""
+	if req.Experience != nil {
+		switch v := req.Experience.(type) {
+		case string:
+			experienceStr = v
+		case float64:
+			experienceStr = fmt.Sprintf("%.0f", v)
+		case int:
+			experienceStr = fmt.Sprintf("%d", v)
+		case int64:
+			experienceStr = fmt.Sprintf("%d", v)
+		}
+	}
+
 	// TODO: Get interviewer ID from auth context
 	interviewerID := "550e8400-e29b-41d4-a716-446655440000"
 
 	response, err := h.candidateService.CreateCandidate(
-		req.Name, req.Email, req.Phone, req.Position, req.Experience,
+		req.Name, req.Email, req.Phone, req.Position, experienceStr,
 		req.Skills, req.ResumeURL, req.LinkedinURL, req.GithubURL, interviewerID,
 	)
 	if err != nil {
@@ -47,7 +64,39 @@ func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	// Convert gRPC response to frontend format
+	pbResponse, ok := response.(*pb.CreateCandidateResponse)
+	if !ok {
+		fmt.Printf("DEBUG: CreateCandidate invalid response type\n")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid response type"})
+		return
+	}
+
+	fmt.Printf("DEBUG: CreateCandidate response: Candidate=%v, Response.Success=%v\n", pbResponse.Candidate != nil, pbResponse.Response != nil && pbResponse.Response.Success)
+
+	if pbResponse.Candidate != nil {
+		fmt.Printf("DEBUG: CreateCandidate returning candidate with id=%s\n", pbResponse.Candidate.Id)
+		candidateMap := map[string]interface{}{
+			"id":             pbResponse.Candidate.Id,
+			"name":           pbResponse.Candidate.Name,
+			"email":          pbResponse.Candidate.Email,
+			"phone":          pbResponse.Candidate.Phone,
+			"position":       pbResponse.Candidate.Position,
+			"experience":     pbResponse.Candidate.Experience,
+			"skills":         pbResponse.Candidate.Skills,
+			"resume_url":     pbResponse.Candidate.ResumeUrl,
+			"linkedin_url":   pbResponse.Candidate.LinkedinUrl,
+			"github_url":     pbResponse.Candidate.GithubUrl,
+			"status":         pbResponse.Candidate.Status,
+			"created_at":     pbResponse.Candidate.CreatedAt,
+			"updated_at":     pbResponse.Candidate.UpdatedAt,
+			"interviewer_id": pbResponse.Candidate.InterviewerId,
+		}
+		c.JSON(http.StatusCreated, candidateMap)
+	} else {
+		fmt.Printf("DEBUG: CreateCandidate Candidate is nil, returning raw response\n")
+		c.JSON(http.StatusCreated, response)
+	}
 }
 
 func (h *CandidateHandler) GetCandidates(c *gin.Context) {
@@ -79,7 +128,36 @@ func (h *CandidateHandler) GetCandidate(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	// Convert gRPC response to frontend format
+	pbResponse, ok := response.(*pb.GetCandidateResponse)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid response type"})
+		return
+	}
+
+	if pbResponse.Candidate != nil {
+		candidateMap := map[string]interface{}{
+			"id":             pbResponse.Candidate.Id,
+			"name":           pbResponse.Candidate.Name,
+			"email":          pbResponse.Candidate.Email,
+			"phone":          pbResponse.Candidate.Phone,
+			"position":       pbResponse.Candidate.Position,
+			"experience":     pbResponse.Candidate.Experience,
+			"skills":         pbResponse.Candidate.Skills,
+			"resume_url":     pbResponse.Candidate.ResumeUrl,
+			"linkedin_url":   pbResponse.Candidate.LinkedinUrl,
+			"github_url":     pbResponse.Candidate.GithubUrl,
+			"status":         pbResponse.Candidate.Status,
+			"created_at":     pbResponse.Candidate.CreatedAt,
+			"updated_at":     pbResponse.Candidate.UpdatedAt,
+			"interviewer_id": pbResponse.Candidate.InterviewerId,
+		}
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"candidate": candidateMap,
+		})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Candidate not found"})
+	}
 }
 
 func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
@@ -90,16 +168,16 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 	}
 
 	var req struct {
-		Name        string `json:"name"`
-		Email       string `json:"email"`
-		Phone       string `json:"phone"`
-		Position    string `json:"position"`
-		Experience  string `json:"experience"`
-		Skills      string `json:"skills"`
-		ResumeURL   string `json:"resume_url"`
-		LinkedinURL string `json:"linkedin_url"`
-		GithubURL   string `json:"github_url"`
-		Status      string `json:"status"`
+		Name        string      `json:"name"`
+		Email       string      `json:"email"`
+		Phone       string      `json:"phone"`
+		Position    string      `json:"position"`
+		Experience  interface{} `json:"experience"`
+		Skills      string      `json:"skills"`
+		ResumeURL   string      `json:"resume_url"`
+		LinkedinURL string      `json:"linkedin_url"`
+		GithubURL   string      `json:"github_url"`
+		Status      string      `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -107,8 +185,23 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 		return
 	}
 
+	// Convert experience to string
+	experienceStr := ""
+	if req.Experience != nil {
+		switch v := req.Experience.(type) {
+		case string:
+			experienceStr = v
+		case float64:
+			experienceStr = fmt.Sprintf("%.0f", v)
+		case int:
+			experienceStr = fmt.Sprintf("%d", v)
+		case int64:
+			experienceStr = fmt.Sprintf("%d", v)
+		}
+	}
+
 	response, err := h.candidateService.UpdateCandidate(
-		candidateID, req.Name, req.Email, req.Phone, req.Position, req.Experience,
+		candidateID, req.Name, req.Email, req.Phone, req.Position, experienceStr,
 		req.Skills, req.ResumeURL, req.LinkedinURL, req.GithubURL, req.Status,
 	)
 	if err != nil {
@@ -116,7 +209,36 @@ func (h *CandidateHandler) UpdateCandidate(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	// Convert gRPC response to frontend format
+	pbResponse, ok := response.(*pb.UpdateCandidateResponse)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid response type"})
+		return
+	}
+
+	if pbResponse.Candidate != nil {
+		candidateMap := map[string]interface{}{
+			"id":             pbResponse.Candidate.Id,
+			"name":           pbResponse.Candidate.Name,
+			"email":          pbResponse.Candidate.Email,
+			"phone":          pbResponse.Candidate.Phone,
+			"position":       pbResponse.Candidate.Position,
+			"experience":     pbResponse.Candidate.Experience,
+			"skills":         pbResponse.Candidate.Skills,
+			"resume_url":     pbResponse.Candidate.ResumeUrl,
+			"linkedin_url":   pbResponse.Candidate.LinkedinUrl,
+			"github_url":     pbResponse.Candidate.GithubUrl,
+			"status":         pbResponse.Candidate.Status,
+			"created_at":     pbResponse.Candidate.CreatedAt,
+			"updated_at":     pbResponse.Candidate.UpdatedAt,
+			"interviewer_id": pbResponse.Candidate.InterviewerId,
+		}
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"candidate": candidateMap,
+		})
+	} else {
+		c.JSON(http.StatusOK, response)
+	}
 }
 
 func (h *CandidateHandler) DeleteCandidate(c *gin.Context) {

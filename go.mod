@@ -44,14 +44,14 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/inter-verse/user-service/gen => ../user-service/gen
+replace github.com/inter-verse/user-service/gen => ./user-service/gen
 
-replace github.com/inter-verse/interview-service/gen => ../interview-service/gen
+replace github.com/inter-verse/interview-service/gen => ./interview-service/gen
 
-replace github.com/inter-verse/candidate-service/gen => ../candidate-service/gen
+replace github.com/inter-verse/candidate-service/gen => ./candidate-service/gen
 
-replace github.com/inter-verse/report-service/gen => ../report-service/gen
+replace github.com/inter-verse/report-service/gen => ./report-service/gen
 
-replace github.com/inter-verse/technology-service/gen => ../technology-service/gen
+replace github.com/inter-verse/technology-service/gen => ./technology-service/gen
 
-replace github.com/inter-verse/question-service/gen => ../question-service/gen
+replace github.com/inter-verse/question-service/gen => ./question-service/gen
