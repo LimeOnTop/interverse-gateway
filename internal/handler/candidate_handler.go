@@ -22,7 +22,7 @@ func NewCandidateHandler(candidateService *service.CandidateService) *CandidateH
 func (h *CandidateHandler) CreateCandidate(c *gin.Context) {
 	var req struct {
 		Name        string      `json:"name" binding:"required"`
-		Email       string      `json:"email" binding:"required,email"`
+		Email       string      `json:"email" binding:"omitempty,email"`
 		Phone       string      `json:"phone"`
 		Position    string      `json:"position"`
 		Experience  interface{} `json:"experience"`

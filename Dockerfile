@@ -6,7 +6,7 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git
 
-# Copy gen directories for all services
+# Copy gen directories for all services first (needed for go mod download)
 COPY user-service/gen/ ./user-service/gen/
 COPY interview-service/gen/ ./interview-service/gen/
 COPY candidate-service/gen/ ./candidate-service/gen/
@@ -18,8 +18,9 @@ COPY question-service/gen/ ./question-service/gen/
 COPY api-gateway/go.mod api-gateway/go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY api-gateway/ ./
+# Copy source code (excluding service directories that will be copied separately)
+COPY api-gateway/main.go ./
+COPY api-gateway/internal/ ./internal/
 
 # Update dependencies and build
 RUN go mod tidy
