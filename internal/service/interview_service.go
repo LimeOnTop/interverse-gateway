@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	pb "github.com/LimeOnTop/interverse-interview/gen"
+	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

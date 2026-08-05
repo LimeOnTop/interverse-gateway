@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/LimeOnTop/interverse-gateway/internal/service"
-	pb "github.com/LimeOnTop/interverse-interview/gen"
+	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
 )
 
 type InterviewHandler struct {

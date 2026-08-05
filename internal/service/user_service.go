@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/LimeOnTop/interverse-user/gen"
+	pb "github.com/LimeOnTop/interverse-contracts/user/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

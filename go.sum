@@ -1,15 +1,5 @@
-github.com/LimeOnTop/interverse-candidate v0.0.0-20260805233700-e7d944fc2e4d h1:vJBhXtO+F3TxVEQ7Kh18MazqSi8jsdzQIJ6jM8OAXgA=
-github.com/LimeOnTop/interverse-candidate v0.0.0-20260805233700-e7d944fc2e4d/go.mod h1:/V4NMf7tvveE0xpxQp2swjbJRGwmZD6hYlEgmem2RI4=
-github.com/LimeOnTop/interverse-interview v0.0.0-20260805233702-c023dbbb82ec h1:sjLHRwmtY7WICAbU4Ps1v114EnemcqGWZvHkvhXSFoU=
-github.com/LimeOnTop/interverse-interview v0.0.0-20260805233702-c023dbbb82ec/go.mod h1:A90UITc9+USbbcauvrp7y3U+KnjsgXcskQHcEcUGL6M=
-github.com/LimeOnTop/interverse-question v0.0.0-20260805233703-3c6e4122d86f h1:gfffcbseUI9RPLIWddwN4q2OLwE1g6PV6TLfVW3HQ+s=
-github.com/LimeOnTop/interverse-question v0.0.0-20260805233703-3c6e4122d86f/go.mod h1:lCnNuHR311v6oToNW+AHLYZJrYMjezxK4k+0F+7Op7Q=
-github.com/LimeOnTop/interverse-report v0.0.0-20260805233705-c50fc238c8b2 h1:5fzAP71m7KFrpxa4LbT5oFiEqTE/toQGdfrBxm0x3jg=
-github.com/LimeOnTop/interverse-report v0.0.0-20260805233705-c50fc238c8b2/go.mod h1:HsOdP3lTX4DJ9ZPsv6dTOcor0xzTJUyiJaV6V4CtLd4=
-github.com/LimeOnTop/interverse-technology v0.0.0-20260805233706-6c57969d7faf h1:EIjz2G8vpNUSaHIJHhuREov9wVtZkRz6GjeWcZP+R50=
-github.com/LimeOnTop/interverse-technology v0.0.0-20260805233706-6c57969d7faf/go.mod h1:nqhW9/AULu0ujNIsD7EeVcLHwudf+FrZ6w0wQWRyJGI=
-github.com/LimeOnTop/interverse-user v0.0.0-20260805233658-b5d227386709 h1:G7uIGQ28GmUjoK7VvakUNzWF8A2MNM3U7F0C4+Lkgm4=
-github.com/LimeOnTop/interverse-user v0.0.0-20260805233658-b5d227386709/go.mod h1:p9TzhDEDUJJ785hHzWxNvnRXu2gfMwGwowBDVX+1JXc=
+github.com/LimeOnTop/interverse-contracts v0.0.0-20260805234728-a1c1a5bacbb9 h1:2bcgCuuVolpmBFES6gQGBdf1cWPzBcpUaDXnDpV4Cko=
+github.com/LimeOnTop/interverse-contracts v0.0.0-20260805234728-a1c1a5bacbb9/go.mod h1:6GuwSvqN145ZrrRK/v3jnLyejIQo2xN3E7XLdw7H3NY=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.9.1 h1:6iJ6NqdoxCDr6mbY8h18oSO+cShGSMRGCEo7F2h0x8s=
 github.com/bytedance/sonic v1.9.1/go.mod h1:i736AoUSYt75HyZLoJW9ERYxcy6eaN6h4BZXU064P/U=

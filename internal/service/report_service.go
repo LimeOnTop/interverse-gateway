@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	pb "github.com/LimeOnTop/interverse-report/gen"
+	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

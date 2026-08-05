@@ -3,12 +3,7 @@ module github.com/LimeOnTop/interverse-gateway
 go 1.25.0
 
 require (
-	github.com/LimeOnTop/interverse-candidate v0.0.0-20260805233700-e7d944fc2e4d
-	github.com/LimeOnTop/interverse-interview v0.0.0-20260805233702-c023dbbb82ec
-	github.com/LimeOnTop/interverse-question v0.0.0-20260805233703-3c6e4122d86f
-	github.com/LimeOnTop/interverse-report v0.0.0-20260805233705-c50fc238c8b2
-	github.com/LimeOnTop/interverse-technology v0.0.0-20260805233706-6c57969d7faf
-	github.com/LimeOnTop/interverse-user v0.0.0-20260805233658-b5d227386709
+	github.com/LimeOnTop/interverse-contracts v0.0.0-20260805234728-a1c1a5bacbb9
 	github.com/gin-gonic/gin v1.9.1
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/grpc v1.76.0
