@@ -1,17 +1,17 @@
-module github.com/inter-verse/api-gateway
+module github.com/LimeOnTop/interverse-gateway
 
 go 1.24.0
 
 toolchain go1.24.2
 
 require (
+	github.com/LimeOnTop/interverse-candidate v0.0.0
+	github.com/LimeOnTop/interverse-interview v0.0.0
+	github.com/LimeOnTop/interverse-question v0.0.0
+	github.com/LimeOnTop/interverse-report v0.0.0
+	github.com/LimeOnTop/interverse-technology v0.0.0
+	github.com/LimeOnTop/interverse-user v0.0.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/inter-verse/candidate-service/gen v0.0.0-00010101000000-000000000000
-	github.com/inter-verse/interview-service/gen v0.0.0-00010101000000-000000000000
-	github.com/inter-verse/question-service/gen v0.0.0-00010101000000-000000000000
-	github.com/inter-verse/report-service/gen v0.0.0-00010101000000-000000000000
-	github.com/inter-verse/technology-service/gen v0.0.0-00010101000000-000000000000
-	github.com/inter-verse/user-service/gen v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/grpc v1.76.0
 )
@@ -44,14 +44,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/inter-verse/user-service/gen => ./user-service/gen
 
-replace github.com/inter-verse/interview-service/gen => ./interview-service/gen
 
-replace github.com/inter-verse/candidate-service/gen => ./candidate-service/gen
 
-replace github.com/inter-verse/report-service/gen => ./report-service/gen
 
-replace github.com/inter-verse/technology-service/gen => ./technology-service/gen
 
-replace github.com/inter-verse/question-service/gen => ./question-service/gen

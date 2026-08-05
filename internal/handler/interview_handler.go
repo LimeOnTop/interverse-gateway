@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/inter-verse/api-gateway/internal/service"
-	pb "github.com/inter-verse/interview-service/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/service"
+	pb "github.com/LimeOnTop/interverse-interview/gen"
 )
 
 type InterviewHandler struct {

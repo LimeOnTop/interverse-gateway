@@ -7,20 +7,20 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 # Copy gen directories for all services first (needed for go mod download)
-COPY user-service/gen/ ./user-service/gen/
-COPY interview-service/gen/ ./interview-service/gen/
-COPY candidate-service/gen/ ./candidate-service/gen/
-COPY report-service/gen/ ./report-service/gen/
-COPY technology-service/gen/ ./technology-service/gen/
-COPY question-service/gen/ ./question-service/gen/
+COPY interverse-user/gen/ ./user-service/gen/
+COPY interverse-interview/gen/ ./interview-service/gen/
+COPY interverse-candidate/gen/ ./candidate-service/gen/
+COPY interverse-report/gen/ ./report-service/gen/
+COPY interverse-technology/gen/ ./technology-service/gen/
+COPY interverse-question/gen/ ./question-service/gen/
 
 # Copy go mod files
-COPY api-gateway/go.mod api-gateway/go.sum ./
+COPY interverse-gateway/go.mod interverse-gateway/go.sum ./
 RUN go mod download
 
 # Copy source code (excluding service directories that will be copied separately)
-COPY api-gateway/main.go ./
-COPY api-gateway/internal/ ./internal/
+COPY interverse-gateway/main.go ./
+COPY interverse-gateway/internal/ ./internal/
 
 # Update dependencies and build
 RUN go mod tidy

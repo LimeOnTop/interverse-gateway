@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/inter-verse/api-gateway/internal/service"
-	pb "github.com/inter-verse/candidate-service/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/service"
+	pb "github.com/LimeOnTop/interverse-candidate/gen"
 )
 
 type CandidateHandler struct {
