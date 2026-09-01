@@ -1,0 +1,28 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  COMPOSE_SERVICE: api-gateway
+
+build:
+  stage: build
+  image: golang:1.25-alpine
+  tags: [interverse, prod]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  before_script:
+    - apk add --no-cache git
+  script:
+    - go build ./...
+
+deploy:prod:
+  stage: deploy
+  tags: [interverse, prod]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  needs: [build]
+  script:
+    - cd "${INFRASTRUCTURE_DIR}"
+    - docker compose -f docker-compose.prod.yml up -d --build ${COMPOSE_SERVICE}
+    - docker compose -f docker-compose.prod.yml ps ${COMPOSE_SERVICE}

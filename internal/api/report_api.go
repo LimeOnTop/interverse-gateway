@@ -1,23 +1,24 @@
-package handler
+package api
 
 import (
 	"net/http"
 
+	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/gin-gonic/gin"
-	"github.com/LimeOnTop/interverse-gateway/internal/service"
 )
 
-type ReportHandler struct {
-	reportService *service.ReportService
+type ReportAPI struct {
+	reportClient *clients.ReportClient
 }
 
-func NewReportHandler(reportService *service.ReportService) *ReportHandler {
-	return &ReportHandler{
-		reportService: reportService,
+func NewReportAPI(reportClient *clients.ReportClient) *ReportAPI {
+	return &ReportAPI{
+		reportClient: reportClient,
 	}
 }
 
-func (h *ReportHandler) CreateReport(c *gin.Context) {
+func (a *ReportAPI) CreateReport(c *gin.Context) {
 	var req struct {
 		InterviewID         string `json:"interview_id" binding:"required"`
 		CandidateID         string `json:"candidate_id" binding:"required"`
@@ -30,17 +31,19 @@ func (h *ReportHandler) CreateReport(c *gin.Context) {
 		Recommendations     string `json:"recommendations"`
 		Notes               string `json:"notes"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// TODO: Get interviewer ID from auth context
-	interviewerID := "550e8400-e29b-41d4-a716-446655440000"
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
 
-	response, err := h.reportService.CreateReport(
-		req.InterviewID, req.CandidateID, interviewerID, req.OverallRating,
+	resp, err := a.reportClient.CreateReport(
+		c.Request.Context(),
+		req.InterviewID, req.CandidateID, user.ID, req.OverallRating,
 		req.TechnicalSkills, req.CommunicationSkills, req.ProblemSolving,
 		req.Strengths, req.Weaknesses, req.Recommendations, req.Notes,
 	)
@@ -49,42 +52,55 @@ func (h *ReportHandler) CreateReport(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+	c.JSON(http.StatusCreated, resp)
 }
 
-func (h *ReportHandler) GetReports(c *gin.Context) {
-	page := c.DefaultQuery("page", "1")
-	limit := c.DefaultQuery("limit", "10")
+func (a *ReportAPI) GetReports(c *gin.Context) {
+	page, limit := parsePagination(c)
 
-	// TODO: Get interviewer ID from auth context
-	interviewerID := "550e8400-e29b-41d4-a716-446655440000"
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
 
-	response, err := h.reportService.GetReports(interviewerID, page, limit)
+	resp, err := a.reportClient.GetReports(c.Request.Context(), user.ID, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
-func (h *ReportHandler) GetReport(c *gin.Context) {
+func (a *ReportAPI) GetReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
 		return
 	}
 
-	response, err := h.reportService.GetReport(reportID)
+	resp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
-func (h *ReportHandler) UpdateReport(c *gin.Context) {
+func (a *ReportAPI) UpdateReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
@@ -101,13 +117,13 @@ func (h *ReportHandler) UpdateReport(c *gin.Context) {
 		Recommendations     string `json:"recommendations"`
 		Notes               string `json:"notes"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	response, err := h.reportService.UpdateReport(
+	resp, err := a.reportClient.UpdateReport(
+		c.Request.Context(),
 		reportID, req.OverallRating, req.TechnicalSkills, req.CommunicationSkills,
 		req.ProblemSolving, req.Strengths, req.Weaknesses, req.Recommendations, req.Notes,
 	)
@@ -116,21 +132,29 @@ func (h *ReportHandler) UpdateReport(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
-func (h *ReportHandler) DeleteReport(c *gin.Context) {
+func (a *ReportAPI) DeleteReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
 		return
 	}
 
-	response, err := h.reportService.DeleteReport(reportID)
+	resp, err := a.reportClient.DeleteReport(c.Request.Context(), reportID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	if resp != nil && !resp.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }

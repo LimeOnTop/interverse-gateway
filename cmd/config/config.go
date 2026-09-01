@@ -8,7 +8,8 @@ import (
 
 type Config struct {
 	Port                 string
-	UserServiceURL       string
+	AuthServiceURL       string
+	ProfileServiceURL    string
 	InterviewServiceURL  string
 	CandidateServiceURL  string
 	ReportServiceURL     string
@@ -18,12 +19,12 @@ type Config struct {
 }
 
 func Load() *Config {
-	// Load .env file if exists
 	godotenv.Load()
 
 	return &Config{
 		Port:                 getEnv("PORT", "8080"),
-		UserServiceURL:       getEnv("USER_SERVICE_URL", "user-service:50051"),
+		AuthServiceURL:       getEnv("AUTH_SERVICE_URL", "auth-service:50051"),
+		ProfileServiceURL:    getEnv("PROFILE_SERVICE_URL", "user-service:50057"),
 		InterviewServiceURL:  getEnv("INTERVIEW_SERVICE_URL", "interview-service:50052"),
 		CandidateServiceURL:  getEnv("CANDIDATE_SERVICE_URL", "candidate-service:50053"),
 		ReportServiceURL:     getEnv("REPORT_SERVICE_URL", "report-service:50054"),
@@ -39,4 +40,3 @@ func getEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-
