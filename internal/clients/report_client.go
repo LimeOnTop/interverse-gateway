@@ -23,6 +23,19 @@ func NewReportClient(reportServiceURL string) *ReportClient {
 	}
 }
 
+func (c *ReportClient) GenerateReport(
+	ctx context.Context,
+	interviewID, userID string,
+	answers []*pb.SessionAnswerInput,
+) (*pb.GenerateReportResponse, error) {
+	req := &pb.GenerateReportRequest{
+		InterviewId: interviewID,
+		UserId:      userID,
+		Answers:     answers,
+	}
+	return c.client.GenerateReport(ctx, req)
+}
+
 func (c *ReportClient) CreateReport(ctx context.Context, interviewID, candidateID, interviewerID, overallRating, technicalSkills, communicationSkills, problemSolving, strengths, weaknesses, recommendations, notes string) (*pb.CreateReportResponse, error) {
 	req := &pb.CreateReportRequest{
 		InterviewId:         interviewID,

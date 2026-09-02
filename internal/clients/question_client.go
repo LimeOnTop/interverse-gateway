@@ -40,7 +40,7 @@ func (c *QuestionClient) GetQuestion(ctx context.Context, questionID string) (*p
 	return c.client.GetQuestion(ctx, req)
 }
 
-func (c *QuestionClient) CreateQuestion(ctx context.Context, text, category, difficulty, technology string, tags []string, answer string) (*pb.CreateQuestionResponse, error) {
+func (c *QuestionClient) CreateQuestion(ctx context.Context, text, category, difficulty, technology string, tags []string, answer string, options []*pb.QuestionOption) (*pb.CreateQuestionResponse, error) {
 	req := &pb.CreateQuestionRequest{
 		Text:       text,
 		Category:   category,
@@ -48,11 +48,12 @@ func (c *QuestionClient) CreateQuestion(ctx context.Context, text, category, dif
 		Technology: technology,
 		Tags:       tags,
 		Answer:     answer,
+		Options:    options,
 	}
 	return c.client.CreateQuestion(ctx, req)
 }
 
-func (c *QuestionClient) UpdateQuestion(ctx context.Context, questionID, text, category, difficulty, technology string, tags []string, answer string) (*pb.UpdateQuestionResponse, error) {
+func (c *QuestionClient) UpdateQuestion(ctx context.Context, questionID, text, category, difficulty, technology string, tags []string, answer string, options []*pb.QuestionOption) (*pb.UpdateQuestionResponse, error) {
 	req := &pb.UpdateQuestionRequest{
 		QuestionId: questionID,
 		Text:       text,
@@ -61,6 +62,7 @@ func (c *QuestionClient) UpdateQuestion(ctx context.Context, questionID, text, c
 		Technology: technology,
 		Tags:       tags,
 		Answer:     answer,
+		Options:    options,
 	}
 	return c.client.UpdateQuestion(ctx, req)
 }

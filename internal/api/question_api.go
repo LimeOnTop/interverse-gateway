@@ -4,8 +4,15 @@ import (
 	"net/http"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
 	"github.com/gin-gonic/gin"
 )
+
+type questionOptionRequest struct {
+	Text      string `json:"text"`
+	IsCorrect bool   `json:"is_correct"`
+	SortOrder int32  `json:"sort_order"`
+}
 
 type QuestionAPI struct {
 	questionClient *clients.QuestionClient
@@ -55,19 +62,20 @@ func (a *QuestionAPI) GetQuestion(c *gin.Context) {
 
 func (a *QuestionAPI) CreateQuestion(c *gin.Context) {
 	var req struct {
-		Text       string   `json:"text" binding:"required"`
-		Category   string   `json:"category" binding:"required"`
-		Difficulty string   `json:"difficulty" binding:"required"`
-		Technology string   `json:"technology" binding:"required"`
-		Tags       []string `json:"tags"`
-		Answer     string   `json:"answer" binding:"required"`
+		Text       string                  `json:"text" binding:"required"`
+		Category   string                  `json:"category" binding:"required"`
+		Difficulty string                  `json:"difficulty" binding:"required"`
+		Technology string                  `json:"technology" binding:"required"`
+		Tags       []string                `json:"tags"`
+		Answer     string                  `json:"answer" binding:"required"`
+		Options    []questionOptionRequest `json:"options"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	resp, err := a.questionClient.CreateQuestion(c.Request.Context(), req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer)
+	resp, err := a.questionClient.CreateQuestion(c.Request.Context(), req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer, toProtoOptions(req.Options))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -88,19 +96,20 @@ func (a *QuestionAPI) UpdateQuestion(c *gin.Context) {
 	}
 
 	var req struct {
-		Text       string   `json:"text"`
-		Category   string   `json:"category"`
-		Difficulty string   `json:"difficulty"`
-		Technology string   `json:"technology"`
-		Tags       []string `json:"tags"`
-		Answer     string   `json:"answer"`
+		Text       string                  `json:"text"`
+		Category   string                  `json:"category"`
+		Difficulty string                  `json:"difficulty"`
+		Technology string                  `json:"technology"`
+		Tags       []string                `json:"tags"`
+		Answer     string                  `json:"answer"`
+		Options    []questionOptionRequest `json:"options"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	resp, err := a.questionClient.UpdateQuestion(c.Request.Context(), questionID, req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer)
+	resp, err := a.questionClient.UpdateQuestion(c.Request.Context(), questionID, req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer, toProtoOptions(req.Options))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -179,4 +188,16 @@ func (a *QuestionAPI) GetQuestionsByTechnology(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+func toProtoOptions(options []questionOptionRequest) []*pb.QuestionOption {
+	result := make([]*pb.QuestionOption, 0, len(options))
+	for _, option := range options {
+		result = append(result, &pb.QuestionOption{
+			Text:      option.Text,
+			IsCorrect: option.IsCorrect,
+			SortOrder: option.SortOrder,
+		})
+	}
+	return result
 }

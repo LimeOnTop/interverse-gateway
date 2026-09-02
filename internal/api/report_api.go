@@ -5,6 +5,7 @@ import (
 
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,6 +60,65 @@ func (a *ReportAPI) CreateReport(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
+func (a *ReportAPI) GenerateReport(c *gin.Context) {
+	var req struct {
+		InterviewID string `json:"interview_id" binding:"required"`
+		Answers     []struct {
+			StepID              string `json:"step_id" binding:"required"`
+			QuestionID          string `json:"question_id"`
+			ItemType            string `json:"item_type" binding:"required"`
+			SelectedOptionIndex *int32 `json:"selected_option_index"`
+			TaskAnswer          string `json:"task_answer"`
+		} `json:"answers" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
+
+	answers := make([]*pb.SessionAnswerInput, 0, len(req.Answers))
+	for _, answer := range req.Answers {
+		input := &pb.SessionAnswerInput{
+			StepId:     answer.StepID,
+			QuestionId: answer.QuestionID,
+			ItemType:   answer.ItemType,
+			TaskAnswer: answer.TaskAnswer,
+		}
+		if answer.SelectedOptionIndex != nil {
+			input.SelectedOptionIndex = *answer.SelectedOptionIndex
+		}
+		answers = append(answers, input)
+	}
+
+	resp, err := a.reportClient.GenerateReport(
+		c.Request.Context(),
+		req.InterviewID,
+		user.ID,
+		answers,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+
+	reportMap := protoReportToMap(resp.GetReport())
+	c.JSON(http.StatusCreated, gin.H{
+		"response": resp.GetResponse(),
+		"report":   mapReportResponse(reportMap),
+		"scores":   resp.GetScores(),
+	})
+}
+
 func (a *ReportAPI) GetReports(c *gin.Context) {
 	page, limit := parsePagination(c)
 
@@ -77,7 +137,17 @@ func (a *ReportAPI) GetReports(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
 		return
 	}
-	c.JSON(http.StatusOK, resp)
+
+	reports := make([]map[string]any, 0, len(resp.GetReports()))
+	for _, report := range resp.GetReports() {
+		reports = append(reports, mapReportResponse(protoReportToMap(report)))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"response":   resp.GetResponse(),
+		"reports":    reports,
+		"pagination": resp.GetPagination(),
+	})
 }
 
 func (a *ReportAPI) GetReport(c *gin.Context) {
@@ -97,7 +167,11 @@ func (a *ReportAPI) GetReport(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
 		return
 	}
-	c.JSON(http.StatusOK, resp)
+
+	c.JSON(http.StatusOK, gin.H{
+		"response": resp.GetResponse(),
+		"report":   mapReportResponse(protoReportToMap(resp.GetReport())),
+	})
 }
 
 func (a *ReportAPI) UpdateReport(c *gin.Context) {

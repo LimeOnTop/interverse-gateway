@@ -88,6 +88,7 @@ func main() {
 		reports := v1.Group("/reports")
 		reports.Use(middleware.AuthRequired(authClient))
 		{
+			reports.POST("/generate", reportAPI.GenerateReport)
 			reports.POST("/", reportAPI.CreateReport)
 			reports.GET("/", reportAPI.GetReports)
 			reports.GET("/:id", reportAPI.GetReport)
