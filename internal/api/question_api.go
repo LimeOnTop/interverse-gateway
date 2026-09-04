@@ -169,15 +169,11 @@ func (a *QuestionAPI) GetQuestionsByTechnology(c *gin.Context) {
 	if technology == "" {
 		technology = c.Query("technology")
 	}
-	if technology == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "technology parameter is required"})
-		return
-	}
 
 	difficulty := c.Query("difficulty")
 	page, limit := parsePagination(c)
 
-	resp, err := a.questionClient.GetQuestionsByTechnology(c.Request.Context(), technology, difficulty, page, limit)
+	resp, err := a.questionClient.GetQuestionsByTechnology(c.Request.Context(), technology, difficulty, c.Query("category"), page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

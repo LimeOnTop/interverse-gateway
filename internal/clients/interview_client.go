@@ -23,15 +23,16 @@ func NewInterviewClient(interviewServiceURL string) *InterviewClient {
 	}
 }
 
-func (c *InterviewClient) CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization string, technologies []string) (*pb.CreateInterviewResponse, error) {
+func (c *InterviewClient) CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization, subscriptionPlan string, technologies []string) (*pb.CreateInterviewResponse, error) {
 	req := &pb.CreateInterviewRequest{
-		UserId:         userID,
-		Title:          title,
-		Description:    description,
-		ScheduledAt:    scheduledAt,
-		Technologies:   technologies,
-		Level:          level,
-		Specialization: specialization,
+		UserId:           userID,
+		Title:            title,
+		Description:      description,
+		ScheduledAt:      scheduledAt,
+		Technologies:     technologies,
+		Level:            level,
+		Specialization:   specialization,
+		SubscriptionPlan: subscriptionPlan,
 	}
 	return c.client.CreateInterview(ctx, req)
 }

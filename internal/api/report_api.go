@@ -63,13 +63,7 @@ func (a *ReportAPI) CreateReport(c *gin.Context) {
 func (a *ReportAPI) GenerateReport(c *gin.Context) {
 	var req struct {
 		InterviewID string `json:"interview_id" binding:"required"`
-		Answers     []struct {
-			StepID              string `json:"step_id" binding:"required"`
-			QuestionID          string `json:"question_id"`
-			ItemType            string `json:"item_type" binding:"required"`
-			SelectedOptionIndex *int32 `json:"selected_option_index"`
-			TaskAnswer          string `json:"task_answer"`
-		} `json:"answers" binding:"required"`
+		Answers     sessionAnswersRequest `json:"answers" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -81,25 +75,11 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		return
 	}
 
-	answers := make([]*pb.SessionAnswerInput, 0, len(req.Answers))
-	for _, answer := range req.Answers {
-		input := &pb.SessionAnswerInput{
-			StepId:     answer.StepID,
-			QuestionId: answer.QuestionID,
-			ItemType:   answer.ItemType,
-			TaskAnswer: answer.TaskAnswer,
-		}
-		if answer.SelectedOptionIndex != nil {
-			input.SelectedOptionIndex = *answer.SelectedOptionIndex
-		}
-		answers = append(answers, input)
-	}
-
 	resp, err := a.reportClient.GenerateReport(
 		c.Request.Context(),
 		req.InterviewID,
 		user.ID,
-		answers,
+		toSessionAnswerInputs(req.Answers),
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -117,6 +97,100 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		"report":   mapReportResponse(reportMap),
 		"scores":   resp.GetScores(),
 	})
+}
+
+func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
+	reportID := c.Param("id")
+	if reportID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
+		return
+	}
+
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
+
+	reportResp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if reportResp.Response != nil && !reportResp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": reportResp.Response.Error})
+		return
+	}
+
+	report := reportResp.GetReport()
+	if report == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "report not found"})
+		return
+	}
+
+	mapped := mapReportResponse(protoReportToMap(report))
+	if analyzed, ok := mapped["ai_analyzed"].(bool); ok && analyzed {
+		c.JSON(http.StatusOK, gin.H{
+			"response": gin.H{"success": true, "message": "Report already analyzed"},
+			"report":   mapped,
+		})
+		return
+	}
+
+	var req struct {
+		Answers sessionAnswersRequest `json:"answers"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	resp, err := a.reportClient.GenerateReport(
+		c.Request.Context(),
+		report.GetInterviewId(),
+		user.ID,
+		toSessionAnswerInputs(req.Answers),
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+
+	reportMap := protoReportToMap(resp.GetReport())
+	c.JSON(http.StatusOK, gin.H{
+		"response": resp.GetResponse(),
+		"report":   mapReportResponse(reportMap),
+		"scores":   resp.GetScores(),
+	})
+}
+
+type sessionAnswerPayload struct {
+	StepID              string `json:"step_id" binding:"required"`
+	QuestionID          string `json:"question_id"`
+	ItemType            string `json:"item_type" binding:"required"`
+	SelectedOptionIndex *int32 `json:"selected_option_index"`
+	TaskAnswer          string `json:"task_answer"`
+}
+
+type sessionAnswersRequest []sessionAnswerPayload
+
+func toSessionAnswerInputs(answers sessionAnswersRequest) []*pb.SessionAnswerInput {
+	result := make([]*pb.SessionAnswerInput, 0, len(answers))
+	for _, answer := range answers {
+		input := &pb.SessionAnswerInput{
+			StepId:     answer.StepID,
+			QuestionId: answer.QuestionID,
+			ItemType:   answer.ItemType,
+			TaskAnswer: answer.TaskAnswer,
+		}
+		if answer.SelectedOptionIndex != nil {
+			input.SelectedOptionIndex = *answer.SelectedOptionIndex
+		}
+		result = append(result, input)
+	}
+	return result
 }
 
 func (a *ReportAPI) GetReports(c *gin.Context) {

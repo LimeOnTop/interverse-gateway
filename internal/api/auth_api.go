@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+	"net/mail"
+	"strings"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
@@ -9,13 +11,19 @@ import (
 )
 
 type AuthAPI struct {
-	authClient *clients.AuthClient
+	authClient    *clients.AuthClient
+	adminUsername string
 }
 
-func NewAuthAPI(authClient *clients.AuthClient) *AuthAPI {
+func NewAuthAPI(authClient *clients.AuthClient, adminUsername string) *AuthAPI {
 	return &AuthAPI{
-		authClient: authClient,
+		authClient:    authClient,
+		adminUsername: strings.TrimSpace(adminUsername),
 	}
+}
+
+func (a *AuthAPI) isAdminLogin(login string) bool {
+	return a.adminUsername != "" && login == a.adminUsername
 }
 
 func (a *AuthAPI) Register(c *gin.Context) {
@@ -26,6 +34,11 @@ func (a *AuthAPI) Register(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if a.isAdminLogin(strings.TrimSpace(req.Email)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "this login is reserved"})
 		return
 	}
 
@@ -44,15 +57,34 @@ func (a *AuthAPI) Register(c *gin.Context) {
 
 func (a *AuthAPI) Login(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
+		Email    string `json:"email"`
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	resp, err := a.authClient.Login(c.Request.Context(), req.Email, req.Password)
+	login := strings.TrimSpace(req.Email)
+	if login == "" {
+		login = strings.TrimSpace(req.Username)
+	}
+	password := req.Password
+	if login == "" || password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "login and password are required"})
+		return
+	}
+
+	// Regular users must provide a valid email; admin may use ADMIN_USERNAME as-is.
+	if !a.isAdminLogin(login) {
+		if _, err := mail.ParseAddress(login); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+			return
+		}
+	}
+
+	resp, err := a.authClient.Login(c.Request.Context(), login, password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -116,7 +148,32 @@ func (a *AuthAPI) GetMe(c *gin.Context) {
 	if !ok {
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": user})
+
+	resp, err := a.authClient.GetUser(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if resp.Response != nil && !resp.Response.Success {
+		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		return
+	}
+	if resp.User == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":                       resp.User.Id,
+			"email":                    resp.User.Email,
+			"name":                     resp.User.Name,
+			"role":                     resp.User.Role,
+			"subscription_plan":        resp.User.SubscriptionPlan,
+			"subscription_active":      resp.User.SubscriptionActive,
+			"subscription_expires_at":  resp.User.SubscriptionExpiresAt,
+		},
+	})
 }
 
 func (a *AuthAPI) GetUser(c *gin.Context) {

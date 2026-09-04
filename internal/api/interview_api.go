@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
@@ -12,11 +13,13 @@ import (
 
 type InterviewAPI struct {
 	interviewClient *clients.InterviewClient
+	authClient      *clients.AuthClient
 }
 
-func NewInterviewAPI(interviewClient *clients.InterviewClient) *InterviewAPI {
+func NewInterviewAPI(interviewClient *clients.InterviewClient, authClient *clients.AuthClient) *InterviewAPI {
 	return &InterviewAPI{
 		interviewClient: interviewClient,
+		authClient:      authClient,
 	}
 }
 
@@ -50,10 +53,26 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 		return
 	}
 
+	subscriptionPlan := "free"
+	if a.authClient != nil {
+		if userResp, err := a.authClient.GetUser(c.Request.Context(), user.ID); err == nil &&
+			userResp.Response != nil && userResp.Response.Success && userResp.User != nil {
+			if userResp.User.SubscriptionActive {
+				subscriptionPlan = "paid"
+			} else if userResp.User.SubscriptionPlan != "" {
+				subscriptionPlan = userResp.User.SubscriptionPlan
+			}
+			// Expired paid falls back to free for quotas.
+			if subscriptionPlan == "paid" && !userResp.User.SubscriptionActive {
+				subscriptionPlan = "free"
+			}
+		}
+	}
+
 	resp, err := a.interviewClient.CreateInterview(
 		c.Request.Context(),
 		user.ID, req.Title, req.Description, req.ScheduledAt,
-		req.Level, req.Specialization, parseTechStack(req.TechStack),
+		req.Level, req.Specialization, subscriptionPlan, parseTechStack(req.TechStack),
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -61,6 +80,13 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
+		if strings.Contains(resp.Response.Error, "training_limit_exceeded") {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error": resp.Response.Error,
+				"code":  "training_limit_exceeded",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
 		return
 	}

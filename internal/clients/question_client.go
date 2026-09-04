@@ -85,10 +85,11 @@ func (c *QuestionClient) SearchQuestions(ctx context.Context, query string, page
 	return c.client.SearchQuestions(ctx, req)
 }
 
-func (c *QuestionClient) GetQuestionsByTechnology(ctx context.Context, technology, difficulty string, page, limit int32) (*pb.GetQuestionsByTechnologyResponse, error) {
+func (c *QuestionClient) GetQuestionsByTechnology(ctx context.Context, technology, difficulty, category string, page, limit int32) (*pb.GetQuestionsByTechnologyResponse, error) {
 	req := &pb.GetQuestionsByTechnologyRequest{
 		Technology: technology,
 		Difficulty: difficulty,
+		Category:   category,
 		Pagination: &pb.Pagination{
 			Page:  page,
 			Limit: limit,

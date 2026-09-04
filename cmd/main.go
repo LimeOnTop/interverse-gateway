@@ -8,6 +8,7 @@ import (
 	"github.com/LimeOnTop/interverse-gateway/cmd/config"
 	"github.com/LimeOnTop/interverse-gateway/internal/api"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/hh"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 )
 
@@ -17,18 +18,25 @@ func main() {
 	authClient := clients.NewAuthClient(cfg.AuthServiceURL)
 	profileClient := clients.NewProfileClient(cfg.ProfileServiceURL)
 	interviewClient := clients.NewInterviewClient(cfg.InterviewServiceURL)
-	candidateClient := clients.NewCandidateClient(cfg.CandidateServiceURL)
 	reportClient := clients.NewReportClient(cfg.ReportServiceURL)
 	technologyClient := clients.NewTechnologyClient(cfg.TechnologyServiceURL)
 	questionClient := clients.NewQuestionClient(cfg.QuestionServiceURL)
 
-	authAPI := api.NewAuthAPI(authClient)
+	authAPI := api.NewAuthAPI(authClient, cfg.AdminUsername)
 	profileAPI := api.NewProfileAPI(profileClient)
-	interviewAPI := api.NewInterviewAPI(interviewClient)
-	candidateAPI := api.NewCandidateAPI(candidateClient)
+	hhClient := hh.NewClient(hh.Config{
+		ClientID:     cfg.HHClientID,
+		ClientSecret: cfg.HHClientSecret,
+		RedirectURI:  cfg.HHRedirectURI,
+		UserAgent:    cfg.HHUserAgent,
+	})
+	hhImportAPI := api.NewHHImportAPI(hhClient)
+	interviewAPI := api.NewInterviewAPI(interviewClient, authClient)
 	reportAPI := api.NewReportAPI(reportClient)
 	technologyAPI := api.NewTechnologyAPI(technologyClient)
 	questionAPI := api.NewQuestionAPI(questionClient)
+	contributionAPI := api.NewContributionAPI(questionClient)
+	adminAPI := api.NewAdminAPI(questionClient)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -57,6 +65,8 @@ func main() {
 			users.DELETE("/:id", authAPI.DeleteUser)
 			users.GET("/:id/profile", profileAPI.GetProfile)
 			users.PUT("/:id/profile", profileAPI.UpdateProfile)
+			users.GET("/:id/profile/hh/auth-url", hhImportAPI.GetAuthURL)
+			users.POST("/:id/profile/import/hh", hhImportAPI.ImportProfile)
 		}
 
 		interviews := v1.Group("/interviews")
@@ -74,21 +84,11 @@ func main() {
 			interviews.POST("/:id/questions", interviewAPI.GenerateQuestions)
 		}
 
-		candidates := v1.Group("/candidates")
-		candidates.Use(middleware.AuthRequired(authClient))
-		{
-			candidates.POST("/", candidateAPI.CreateCandidate)
-			candidates.GET("/", candidateAPI.GetCandidates)
-			candidates.GET("/:id", candidateAPI.GetCandidate)
-			candidates.PUT("/:id", candidateAPI.UpdateCandidate)
-			candidates.DELETE("/:id", candidateAPI.DeleteCandidate)
-			candidates.GET("/search", candidateAPI.SearchCandidates)
-		}
-
 		reports := v1.Group("/reports")
 		reports.Use(middleware.AuthRequired(authClient))
 		{
 			reports.POST("/generate", reportAPI.GenerateReport)
+			reports.POST("/:id/analyze", reportAPI.AnalyzeReport)
 			reports.POST("/", reportAPI.CreateReport)
 			reports.GET("/", reportAPI.GetReports)
 			reports.GET("/:id", reportAPI.GetReport)
@@ -112,11 +112,27 @@ func main() {
 		{
 			questions.GET("/", questionAPI.GetQuestions)
 			questions.GET("/:id", questionAPI.GetQuestion)
-			questions.POST("/", questionAPI.CreateQuestion)
-			questions.PUT("/:id", questionAPI.UpdateQuestion)
-			questions.DELETE("/:id", questionAPI.DeleteQuestion)
 			questions.GET("/search", questionAPI.SearchQuestions)
 			questions.GET("/technology/:technology", questionAPI.GetQuestionsByTechnology)
+			questions.POST("/", middleware.AdminRequired(), questionAPI.CreateQuestion)
+			questions.PUT("/:id", middleware.AdminRequired(), questionAPI.UpdateQuestion)
+			questions.DELETE("/:id", middleware.AdminRequired(), questionAPI.DeleteQuestion)
+		}
+
+		contributions := v1.Group("/contributions")
+		contributions.Use(middleware.AuthRequired(authClient))
+		{
+			contributions.POST("/questions", contributionAPI.SubmitQuestion)
+		}
+
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AuthRequired(authClient), middleware.AdminRequired())
+		{
+			admin.GET("/stats", adminAPI.Stats)
+			admin.GET("/questions", adminAPI.ListQuestions)
+			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)
+			admin.POST("/moderation/questions/:id/approve", adminAPI.ApproveModerationQuestion)
+			admin.POST("/moderation/questions/:id/reject", adminAPI.RejectModerationQuestion)
 		}
 	}
 
