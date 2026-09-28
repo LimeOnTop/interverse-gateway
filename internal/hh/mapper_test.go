@@ -4,10 +4,10 @@ import "testing"
 
 func TestExtractResumeID(t *testing.T) {
 	cases := map[string]string{
-		"https://hh.ru/resume/abc123def":        "abc123def",
+		"https://hh.ru/resume/abc123def":         "abc123def",
 		"https://hh.ru/resume/abc123def?query=1": "abc123def",
-		"abc123def":                             "abc123def",
-		"":                                      "",
+		"abc123def":                              "abc123def",
+		"":                                       "",
 	}
 
 	for input, want := range cases {
@@ -21,8 +21,8 @@ func TestExtractResumeID(t *testing.T) {
 func TestMapEnglishLevel(t *testing.T) {
 	resume := Resume{
 		Language: []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
+			ID    string `json:"id"`
+			Name  string `json:"name"`
 			Level *struct {
 				ID   string `json:"id"`
 				Name string `json:"name"`

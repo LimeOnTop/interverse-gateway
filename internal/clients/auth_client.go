@@ -4,8 +4,6 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/auth/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AuthClient struct {
@@ -13,13 +11,8 @@ type AuthClient struct {
 }
 
 func NewAuthClient(authServiceURL string) *AuthClient {
-	conn, err := grpc.NewClient(authServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to auth service: " + err.Error())
-	}
-
 	return &AuthClient{
-		client: pb.NewAuthServiceClient(conn),
+		client: pb.NewAuthServiceClient(dialGRPC(authServiceURL, "auth-service")),
 	}
 }
 
@@ -65,11 +58,11 @@ func (c *AuthClient) DeleteUser(ctx context.Context, id string) (*pb.Response, e
 	return c.client.DeleteUser(ctx, req)
 }
 
-func (c *AuthClient) ValidateToken(ctx context.Context, token string) (*pb.ValidateTokenResponse, error) {
-	req := &pb.ValidateTokenRequest{
+func (c *AuthClient) Logout(ctx context.Context, token string) (*pb.Response, error) {
+	req := &pb.LogoutRequest{
 		Token: token,
 	}
-	return c.client.ValidateToken(ctx, req)
+	return c.client.Logout(ctx, req)
 }
 
 func (c *AuthClient) RefreshToken(ctx context.Context, refreshToken string) (*pb.RefreshTokenResponse, error) {
@@ -77,11 +70,4 @@ func (c *AuthClient) RefreshToken(ctx context.Context, refreshToken string) (*pb
 		RefreshToken: refreshToken,
 	}
 	return c.client.RefreshToken(ctx, req)
-}
-
-func (c *AuthClient) Logout(ctx context.Context, token string) (*pb.Response, error) {
-	req := &pb.LogoutRequest{
-		Token: token,
-	}
-	return c.client.Logout(ctx, req)
 }

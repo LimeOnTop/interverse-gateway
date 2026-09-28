@@ -4,8 +4,6 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type QuestionClient struct {
@@ -13,13 +11,8 @@ type QuestionClient struct {
 }
 
 func NewQuestionClient(questionServiceURL string) *QuestionClient {
-	conn, err := grpc.NewClient(questionServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to question service: " + err.Error())
-	}
-
 	return &QuestionClient{
-		client: pb.NewQuestionServiceClient(conn),
+		client: pb.NewQuestionServiceClient(dialGRPC(questionServiceURL, "question-service")),
 	}
 }
 

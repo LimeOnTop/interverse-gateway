@@ -2,10 +2,9 @@ package clients
 
 import (
 	"context"
+	"time"
 
 	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type ReportClient struct {
@@ -13,13 +12,8 @@ type ReportClient struct {
 }
 
 func NewReportClient(reportServiceURL string) *ReportClient {
-	conn, err := grpc.NewClient(reportServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to report service: " + err.Error())
-	}
-
 	return &ReportClient{
-		client: pb.NewReportServiceClient(conn),
+		client: pb.NewReportServiceClient(dialGRPCWithTimeout(reportServiceURL, "report-service", 120*time.Second)),
 	}
 }
 
@@ -36,11 +30,10 @@ func (c *ReportClient) GenerateReport(
 	return c.client.GenerateReport(ctx, req)
 }
 
-func (c *ReportClient) CreateReport(ctx context.Context, interviewID, candidateID, interviewerID, overallRating, technicalSkills, communicationSkills, problemSolving, strengths, weaknesses, recommendations, notes string) (*pb.CreateReportResponse, error) {
+func (c *ReportClient) CreateReport(ctx context.Context, interviewID, userID, overallRating, technicalSkills, communicationSkills, problemSolving, strengths, weaknesses, recommendations, notes string) (*pb.CreateReportResponse, error) {
 	req := &pb.CreateReportRequest{
 		InterviewId:         interviewID,
-		CandidateId:         candidateID,
-		InterviewerId:       interviewerID,
+		UserId:              userID,
 		OverallRating:       overallRating,
 		TechnicalSkills:     technicalSkills,
 		CommunicationSkills: communicationSkills,
@@ -53,9 +46,9 @@ func (c *ReportClient) CreateReport(ctx context.Context, interviewID, candidateI
 	return c.client.CreateReport(ctx, req)
 }
 
-func (c *ReportClient) GetReports(ctx context.Context, interviewerID string, page, limit int32) (*pb.GetReportsResponse, error) {
+func (c *ReportClient) GetReports(ctx context.Context, userID string, page, limit int32) (*pb.GetReportsResponse, error) {
 	req := &pb.GetReportsRequest{
-		InterviewerId: interviewerID,
+		UserId: userID,
 		Pagination: &pb.Pagination{
 			Page:  page,
 			Limit: limit,

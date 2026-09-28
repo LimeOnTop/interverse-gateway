@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 
@@ -29,13 +30,13 @@ func (a *ContributionAPI) SubmitQuestion(c *gin.Context) {
 		Technology string `json:"technology"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	text := strings.TrimSpace(req.Text)
 	if len(text) < 10 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question text is too short"})
+		apperr.Public(c, http.StatusBadRequest, "question text is too short")
 		return
 	}
 
@@ -60,11 +61,11 @@ func (a *ContributionAPI) SubmitQuestion(c *gin.Context) {
 		nil,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 

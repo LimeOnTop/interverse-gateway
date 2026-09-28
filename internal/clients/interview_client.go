@@ -4,8 +4,6 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type InterviewClient struct {
@@ -13,13 +11,8 @@ type InterviewClient struct {
 }
 
 func NewInterviewClient(interviewServiceURL string) *InterviewClient {
-	conn, err := grpc.NewClient(interviewServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to interview service: " + err.Error())
-	}
-
 	return &InterviewClient{
-		client: pb.NewInterviewServiceClient(conn),
+		client: pb.NewInterviewServiceClient(dialGRPC(interviewServiceURL, "interview-service")),
 	}
 }
 

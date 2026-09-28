@@ -4,16 +4,23 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/LimeOnTop/interverse-gateway/cmd/config"
 	"github.com/LimeOnTop/interverse-gateway/internal/api"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
+	"github.com/LimeOnTop/interverse-gateway/internal/authjwt"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/hh"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 	cfg := config.Load()
+	apperr.Configure(cfg.DevMode)
+	if !cfg.DevMode {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	authClient := clients.NewAuthClient(cfg.AuthServiceURL)
 	profileClient := clients.NewProfileClient(cfg.ProfileServiceURL)
@@ -21,6 +28,15 @@ func main() {
 	reportClient := clients.NewReportClient(cfg.ReportServiceURL)
 	technologyClient := clients.NewTechnologyClient(cfg.TechnologyServiceURL)
 	questionClient := clients.NewQuestionClient(cfg.QuestionServiceURL)
+
+	jwtValidator := authjwt.NewValidator(cfg.JWTSecret)
+	accessRedis := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAccessAddr,
+		DB:   cfg.RedisAccessDB,
+	})
+	defer accessRedis.Close()
+	accessBlacklist := authjwt.NewAccessBlacklist(accessRedis)
+	requireAuth := middleware.AuthRequired(jwtValidator, accessBlacklist)
 
 	authAPI := api.NewAuthAPI(authClient, cfg.AdminUsername)
 	profileAPI := api.NewProfileAPI(profileClient)
@@ -53,12 +69,12 @@ func main() {
 			auth.POST("/register", authAPI.Register)
 			auth.POST("/login", authAPI.Login)
 			auth.POST("/refresh", authAPI.RefreshToken)
-			auth.POST("/logout", middleware.AuthRequired(authClient), authAPI.Logout)
-			auth.GET("/me", middleware.AuthRequired(authClient), authAPI.GetMe)
+			auth.POST("/logout", requireAuth, authAPI.Logout)
+			auth.GET("/me", requireAuth, authAPI.GetMe)
 		}
 
 		users := v1.Group("/users")
-		users.Use(middleware.AuthRequired(authClient))
+		users.Use(requireAuth)
 		{
 			users.GET("/:id", authAPI.GetUser)
 			users.PUT("/:id", authAPI.UpdateUser)
@@ -70,7 +86,7 @@ func main() {
 		}
 
 		interviews := v1.Group("/interviews")
-		interviews.Use(middleware.AuthRequired(authClient))
+		interviews.Use(requireAuth)
 		{
 			interviews.POST("/", interviewAPI.CreateInterview)
 			interviews.GET("/", interviewAPI.GetInterviews)
@@ -85,7 +101,7 @@ func main() {
 		}
 
 		reports := v1.Group("/reports")
-		reports.Use(middleware.AuthRequired(authClient))
+		reports.Use(requireAuth)
 		{
 			reports.POST("/generate", reportAPI.GenerateReport)
 			reports.POST("/:id/analyze", reportAPI.AnalyzeReport)
@@ -97,7 +113,7 @@ func main() {
 		}
 
 		technologies := v1.Group("/technologies")
-		technologies.Use(middleware.AuthRequired(authClient))
+		technologies.Use(requireAuth)
 		{
 			technologies.GET("/", technologyAPI.GetTechnologies)
 			technologies.GET("/:id", technologyAPI.GetTechnology)
@@ -108,7 +124,7 @@ func main() {
 		}
 
 		questions := v1.Group("/questions")
-		questions.Use(middleware.AuthRequired(authClient))
+		questions.Use(requireAuth)
 		{
 			questions.GET("/", questionAPI.GetQuestions)
 			questions.GET("/:id", questionAPI.GetQuestion)
@@ -120,13 +136,13 @@ func main() {
 		}
 
 		contributions := v1.Group("/contributions")
-		contributions.Use(middleware.AuthRequired(authClient))
+		contributions.Use(requireAuth)
 		{
 			contributions.POST("/questions", contributionAPI.SubmitQuestion)
 		}
 
 		admin := v1.Group("/admin")
-		admin.Use(middleware.AuthRequired(authClient), middleware.AdminRequired())
+		admin.Use(requireAuth, middleware.AdminRequired())
 		{
 			admin.GET("/stats", adminAPI.Stats)
 			admin.GET("/questions", adminAPI.ListQuestions)

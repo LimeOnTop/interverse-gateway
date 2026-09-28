@@ -2,8 +2,9 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/authjwt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,8 @@ type User struct {
 	Role  string `json:"role"`
 }
 
-func AuthRequired(authClient *clients.AuthClient) gin.HandlerFunc {
+// AuthRequired validates JWT locally in the gateway (HMAC + optional Redis blacklist).
+func AuthRequired(validator *authjwt.Validator, blacklist *authjwt.AccessBlacklist) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -24,35 +26,42 @@ func AuthRequired(authClient *clients.AuthClient) gin.HandlerFunc {
 			return
 		}
 
-		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
 			c.Abort()
 			return
 		}
 
-		resp, err := authClient.ValidateToken(c.Request.Context(), authHeader[7:])
+		token := strings.TrimSpace(authHeader[len("Bearer "):])
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		claims, err := validator.ParseAccess(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		if resp.Response != nil && !resp.Response.Success {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": resp.Response.Error})
+		revoked, err := blacklist.IsRevoked(c.Request.Context(), claims.JTI)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
-
-		if !resp.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		if revoked {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token revoked"})
 			c.Abort()
 			return
 		}
 
 		c.Set(userContextKey, User{
-			ID:    resp.Id,
-			Email: resp.Email,
-			Role:  resp.Role,
+			ID:    claims.UserID,
+			Email: claims.Email,
+			Role:  claims.Role,
 		})
 		c.Next()
 	}

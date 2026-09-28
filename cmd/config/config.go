@@ -2,12 +2,14 @@ package config
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
 	Port                 string
+	DevMode              bool
 	AuthServiceURL       string
 	ProfileServiceURL    string
 	InterviewServiceURL  string
@@ -15,6 +17,8 @@ type Config struct {
 	TechnologyServiceURL string
 	QuestionServiceURL   string
 	JWTSecret            string
+	RedisAccessAddr      string
+	RedisAccessDB        int
 	AdminUsername        string
 	HHClientID           string
 	HHClientSecret       string
@@ -27,6 +31,7 @@ func Load() *Config {
 
 	return &Config{
 		Port:                 getEnv("PORT", "8080"),
+		DevMode:              getEnvBool("DEV_MODE", false),
 		AuthServiceURL:       getEnv("AUTH_SERVICE_URL", "auth-service:50051"),
 		ProfileServiceURL:    getEnv("PROFILE_SERVICE_URL", "user-service:50057"),
 		InterviewServiceURL:  getEnv("INTERVIEW_SERVICE_URL", "interview-service:50052"),
@@ -34,6 +39,8 @@ func Load() *Config {
 		TechnologyServiceURL: getEnv("TECHNOLOGY_SERVICE_URL", "technology-service:50055"),
 		QuestionServiceURL:   getEnv("QUESTION_SERVICE_URL", "question-service:50056"),
 		JWTSecret:            getEnv("JWT_SECRET", "your-secret-key"),
+		RedisAccessAddr:      getEnv("REDIS_ACCESS_ADDR", "localhost:6379"),
+		RedisAccessDB:        getEnvInt("REDIS_ACCESS_DB", 1),
 		AdminUsername:        getEnv("ADMIN_USERNAME", ""),
 		HHClientID:           getEnv("HH_CLIENT_ID", ""),
 		HHClientSecret:       getEnv("HH_CLIENT_SECRET", ""),
@@ -47,4 +54,25 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
 }

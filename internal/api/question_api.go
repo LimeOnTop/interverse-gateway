@@ -1,10 +1,11 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,12 +30,12 @@ func (a *QuestionAPI) GetQuestions(c *gin.Context) {
 
 	resp, err := a.questionClient.GetQuestions(c.Request.Context(), page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -43,18 +44,18 @@ func (a *QuestionAPI) GetQuestions(c *gin.Context) {
 func (a *QuestionAPI) GetQuestion(c *gin.Context) {
 	questionID := c.Param("id")
 	if questionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "question ID is required")
 		return
 	}
 
 	resp, err := a.questionClient.GetQuestion(c.Request.Context(), questionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -71,18 +72,18 @@ func (a *QuestionAPI) CreateQuestion(c *gin.Context) {
 		Options    []questionOptionRequest `json:"options"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	resp, err := a.questionClient.CreateQuestion(c.Request.Context(), req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer, toProtoOptions(req.Options))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusCreated, resp)
@@ -91,7 +92,7 @@ func (a *QuestionAPI) CreateQuestion(c *gin.Context) {
 func (a *QuestionAPI) UpdateQuestion(c *gin.Context) {
 	questionID := c.Param("id")
 	if questionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "question ID is required")
 		return
 	}
 
@@ -105,18 +106,18 @@ func (a *QuestionAPI) UpdateQuestion(c *gin.Context) {
 		Options    []questionOptionRequest `json:"options"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	resp, err := a.questionClient.UpdateQuestion(c.Request.Context(), questionID, req.Text, req.Category, req.Difficulty, req.Technology, req.Tags, req.Answer, toProtoOptions(req.Options))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -125,18 +126,18 @@ func (a *QuestionAPI) UpdateQuestion(c *gin.Context) {
 func (a *QuestionAPI) DeleteQuestion(c *gin.Context) {
 	questionID := c.Param("id")
 	if questionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "question ID is required")
 		return
 	}
 
 	resp, err := a.questionClient.DeleteQuestion(c.Request.Context(), questionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -145,7 +146,7 @@ func (a *QuestionAPI) DeleteQuestion(c *gin.Context) {
 func (a *QuestionAPI) SearchQuestions(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
+		apperr.Public(c, http.StatusBadRequest, "search query is required")
 		return
 	}
 
@@ -153,12 +154,12 @@ func (a *QuestionAPI) SearchQuestions(c *gin.Context) {
 
 	resp, err := a.questionClient.SearchQuestions(c.Request.Context(), query, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -175,12 +176,12 @@ func (a *QuestionAPI) GetQuestionsByTechnology(c *gin.Context) {
 
 	resp, err := a.questionClient.GetQuestionsByTechnology(c.Request.Context(), technology, difficulty, c.Query("category"), page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)

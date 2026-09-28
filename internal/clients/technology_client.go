@@ -4,8 +4,6 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/technology/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type TechnologyClient struct {
@@ -13,13 +11,8 @@ type TechnologyClient struct {
 }
 
 func NewTechnologyClient(technologyServiceURL string) *TechnologyClient {
-	conn, err := grpc.NewClient(technologyServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to technology service: " + err.Error())
-	}
-
 	return &TechnologyClient{
-		client: pb.NewTechnologyServiceClient(conn),
+		client: pb.NewTechnologyServiceClient(dialGRPC(technologyServiceURL, "technology-service")),
 	}
 }
 

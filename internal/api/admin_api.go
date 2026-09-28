@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 
@@ -21,7 +22,7 @@ func (a *AdminAPI) Stats(c *gin.Context) {
 
 	totalResp, err := a.questionClient.GetQuestions(ctx, 1, 1)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
@@ -39,7 +40,7 @@ func (a *AdminAPI) Stats(c *gin.Context) {
 		}
 		resp, err := a.questionClient.GetQuestionsByTechnology(ctx, "", level, category, 1, 1)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			apperr.Internal(c, err)
 			return
 		}
 		total := int32(0)
@@ -74,11 +75,11 @@ func (a *AdminAPI) ListQuestions(c *gin.Context) {
 	if technology == "" && difficulty == "" && category == "" {
 		resp, err := a.questionClient.GetQuestions(c.Request.Context(), page, limit)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			apperr.Internal(c, err)
 			return
 		}
 		if resp.Response != nil && !resp.Response.Success {
-			c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+			apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 			return
 		}
 		c.JSON(http.StatusOK, resp)
@@ -87,11 +88,11 @@ func (a *AdminAPI) ListQuestions(c *gin.Context) {
 
 	resp, err := a.questionClient.GetQuestionsByTechnology(c.Request.Context(), technology, difficulty, category, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -112,11 +113,11 @@ func (a *AdminAPI) ListModerationQuestions(c *gin.Context) {
 		limit,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -125,7 +126,7 @@ func (a *AdminAPI) ListModerationQuestions(c *gin.Context) {
 func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
 	questionID := c.Param("id")
 	if questionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "question ID is required")
 		return
 	}
 
@@ -137,7 +138,7 @@ func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
 		Answer     string `json:"answer"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -145,26 +146,26 @@ func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
 	switch difficulty {
 	case "junior", "middle", "senior":
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "difficulty must be junior, middle or senior"})
+		apperr.Public(c, http.StatusBadRequest, "difficulty must be junior, middle or senior")
 		return
 	}
 
 	existing, err := a.questionClient.GetQuestion(c.Request.Context(), questionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if existing.Response != nil && !existing.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": existing.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, existing.Response.Error)
 		return
 	}
 	if existing.Question == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "question not found"})
+		apperr.Public(c, http.StatusNotFound, "question not found")
 		return
 	}
 	q := existing.Question
 	if q.Difficulty != "pending_moderation" && q.Category != "contribution" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question is not pending moderation"})
+		apperr.Public(c, http.StatusBadRequest, "question is not pending moderation")
 		return
 	}
 
@@ -209,11 +210,11 @@ func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
 		q.Options,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 
@@ -226,27 +227,27 @@ func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
 func (a *AdminAPI) RejectModerationQuestion(c *gin.Context) {
 	questionID := c.Param("id")
 	if questionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "question ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "question ID is required")
 		return
 	}
 
 	existing, err := a.questionClient.GetQuestion(c.Request.Context(), questionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if existing.Question == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "question not found"})
+		apperr.Public(c, http.StatusNotFound, "question not found")
 		return
 	}
 
 	resp, err := a.questionClient.DeleteQuestion(c.Request.Context(), questionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 

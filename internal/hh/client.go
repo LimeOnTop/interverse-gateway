@@ -137,9 +137,9 @@ type Resume struct {
 		Name string `json:"name"`
 	} `json:"skill_set"`
 	Photo *struct {
-		Small  string `json:"small"`
-		Medium string `json:"medium"`
-		Large  string `json:"40"`
+		Small   string `json:"small"`
+		Medium  string `json:"medium"`
+		Large   string `json:"40"`
 		Size100 string `json:"100"`
 		Size500 string `json:"500"`
 	} `json:"photo"`
@@ -163,8 +163,8 @@ type Resume struct {
 		} `json:"primary"`
 	} `json:"education"`
 	Language []struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
+		ID    string `json:"id"`
+		Name  string `json:"name"`
 		Level *struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`

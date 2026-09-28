@@ -1,11 +1,12 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
+	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
-	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +23,6 @@ func NewReportAPI(reportClient *clients.ReportClient) *ReportAPI {
 func (a *ReportAPI) CreateReport(c *gin.Context) {
 	var req struct {
 		InterviewID         string `json:"interview_id" binding:"required"`
-		CandidateID         string `json:"candidate_id" binding:"required"`
 		OverallRating       string `json:"overall_rating" binding:"required"`
 		TechnicalSkills     string `json:"technical_skills" binding:"required"`
 		CommunicationSkills string `json:"communication_skills" binding:"required"`
@@ -33,7 +33,7 @@ func (a *ReportAPI) CreateReport(c *gin.Context) {
 		Notes               string `json:"notes"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -44,17 +44,17 @@ func (a *ReportAPI) CreateReport(c *gin.Context) {
 
 	resp, err := a.reportClient.CreateReport(
 		c.Request.Context(),
-		req.InterviewID, req.CandidateID, user.ID, req.OverallRating,
+		req.InterviewID, user.ID, req.OverallRating,
 		req.TechnicalSkills, req.CommunicationSkills, req.ProblemSolving,
 		req.Strengths, req.Weaknesses, req.Recommendations, req.Notes,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusCreated, resp)
@@ -62,11 +62,11 @@ func (a *ReportAPI) CreateReport(c *gin.Context) {
 
 func (a *ReportAPI) GenerateReport(c *gin.Context) {
 	var req struct {
-		InterviewID string `json:"interview_id" binding:"required"`
+		InterviewID string                `json:"interview_id" binding:"required"`
 		Answers     sessionAnswersRequest `json:"answers" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -82,12 +82,12 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		toSessionAnswerInputs(req.Answers),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "report ID is required")
 		return
 	}
 
@@ -113,18 +113,18 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 
 	reportResp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if reportResp.Response != nil && !reportResp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": reportResp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, reportResp.Response.Error)
 		return
 	}
 
 	report := reportResp.GetReport()
 	if report == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "report not found"})
+		apperr.Public(c, http.StatusNotFound, "report not found")
 		return
 	}
 
@@ -149,12 +149,12 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 		toSessionAnswerInputs(req.Answers),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 
@@ -203,12 +203,12 @@ func (a *ReportAPI) GetReports(c *gin.Context) {
 
 	resp, err := a.reportClient.GetReports(c.Request.Context(), user.ID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 
@@ -227,18 +227,18 @@ func (a *ReportAPI) GetReports(c *gin.Context) {
 func (a *ReportAPI) GetReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "report ID is required")
 		return
 	}
 
 	resp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 
@@ -251,7 +251,7 @@ func (a *ReportAPI) GetReport(c *gin.Context) {
 func (a *ReportAPI) UpdateReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "report ID is required")
 		return
 	}
 
@@ -266,7 +266,7 @@ func (a *ReportAPI) UpdateReport(c *gin.Context) {
 		Notes               string `json:"notes"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -276,12 +276,12 @@ func (a *ReportAPI) UpdateReport(c *gin.Context) {
 		req.ProblemSolving, req.Strengths, req.Weaknesses, req.Recommendations, req.Notes,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -290,18 +290,18 @@ func (a *ReportAPI) UpdateReport(c *gin.Context) {
 func (a *ReportAPI) DeleteReport(c *gin.Context) {
 	reportID := c.Param("id")
 	if reportID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "report ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "report ID is required")
 		return
 	}
 
 	resp, err := a.reportClient.DeleteReport(c.Request.Context(), reportID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)

@@ -4,8 +4,6 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/user/gen"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type ProfileClient struct {
@@ -13,13 +11,8 @@ type ProfileClient struct {
 }
 
 func NewProfileClient(profileServiceURL string) *ProfileClient {
-	conn, err := grpc.NewClient(profileServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("connect to profile service: " + err.Error())
-	}
-
 	return &ProfileClient{
-		client: pb.NewUserProfileServiceClient(conn),
+		client: pb.NewUserProfileServiceClient(dialGRPC(profileServiceURL, "user-service")),
 	}
 }
 

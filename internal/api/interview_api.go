@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 		TechStack      string `json:"tech_stack,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -75,7 +76,7 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 		req.Level, req.Specialization, subscriptionPlan, parseTechStack(req.TechStack),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
@@ -87,7 +88,7 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 			})
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusCreated, resp)
@@ -104,12 +105,12 @@ func (a *InterviewAPI) GetInterviews(c *gin.Context) {
 
 	resp, err := a.interviewClient.GetInterviews(c.Request.Context(), user.ID, status, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -118,18 +119,18 @@ func (a *InterviewAPI) GetInterviews(c *gin.Context) {
 func (a *InterviewAPI) GetInterview(c *gin.Context) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "interview ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
 		return
 	}
 
 	resp, err := a.interviewClient.GetInterview(c.Request.Context(), interviewID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -138,7 +139,7 @@ func (a *InterviewAPI) GetInterview(c *gin.Context) {
 func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "interview ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
 		return
 	}
 
@@ -152,7 +153,7 @@ func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
 		TechStack      string `json:"tech_stack,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -162,12 +163,12 @@ func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
 		req.Level, req.Specialization, parseTechStack(req.TechStack),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -176,18 +177,18 @@ func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
 func (a *InterviewAPI) DeleteInterview(c *gin.Context) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "interview ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
 		return
 	}
 
 	resp, err := a.interviewClient.DeleteInterview(c.Request.Context(), interviewID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -203,12 +204,12 @@ func (a *InterviewAPI) GetScheduledInterviews(c *gin.Context) {
 
 	resp, err := a.interviewClient.GetScheduledInterviews(c.Request.Context(), user.ID, date)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -217,7 +218,7 @@ func (a *InterviewAPI) GetScheduledInterviews(c *gin.Context) {
 func (a *InterviewAPI) StartSession(c *gin.Context) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "interview ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
 		return
 	}
 
@@ -228,12 +229,12 @@ func (a *InterviewAPI) StartSession(c *gin.Context) {
 
 	resp, err := a.interviewClient.StartSession(c.Request.Context(), interviewID, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -242,7 +243,7 @@ func (a *InterviewAPI) StartSession(c *gin.Context) {
 func (a *InterviewAPI) GetSessionContent(c *gin.Context) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "interview ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
 		return
 	}
 
@@ -253,12 +254,12 @@ func (a *InterviewAPI) GetSessionContent(c *gin.Context) {
 
 	resp, err := a.interviewClient.GetSessionContent(c.Request.Context(), interviewID, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -274,7 +275,7 @@ func (a *InterviewAPI) StartSessionFromBody(c *gin.Context) {
 		InterviewID string `json:"interview_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -285,12 +286,12 @@ func (a *InterviewAPI) StartSessionFromBody(c *gin.Context) {
 
 	resp, err := a.interviewClient.StartSession(c.Request.Context(), req.InterviewID, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 

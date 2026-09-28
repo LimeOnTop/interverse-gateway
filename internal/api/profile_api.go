@@ -1,11 +1,12 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/gin-gonic/gin"
 )
 
 type ProfileAPI struct {
@@ -19,23 +20,23 @@ func NewProfileAPI(profileClient *clients.ProfileClient) *ProfileAPI {
 func (a *ProfileAPI) GetProfile(c *gin.Context) {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		apperr.Public(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "user ID is required")
 		return
 	}
 	if userID != user.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		apperr.Public(c, http.StatusForbidden, "access denied")
 		return
 	}
 
 	resp, err := a.profileClient.GetProfile(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
@@ -52,17 +53,17 @@ func (a *ProfileAPI) GetProfile(c *gin.Context) {
 func (a *ProfileAPI) UpdateProfile(c *gin.Context) {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		apperr.Public(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "user ID is required")
 		return
 	}
 	if userID != user.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		apperr.Public(c, http.StatusForbidden, "access denied")
 		return
 	}
 
@@ -74,7 +75,7 @@ func (a *ProfileAPI) UpdateProfile(c *gin.Context) {
 		EnglishLevel    string `json:"english_level"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -88,7 +89,7 @@ func (a *ProfileAPI) UpdateProfile(c *gin.Context) {
 		req.EnglishLevel,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {

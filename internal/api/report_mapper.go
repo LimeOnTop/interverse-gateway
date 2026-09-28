@@ -99,6 +99,7 @@ func mapReportResponse(report map[string]any) map[string]any {
 	return map[string]any{
 		"id":                  report["id"],
 		"interview_id":        report["interview_id"],
+		"user_id":             report["user_id"],
 		"overall_score":       overallScore,
 		"algorithm_score":     algorithmScore,
 		"architecture_score":  metadata.ArchitectureScore,

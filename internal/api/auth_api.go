@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -33,23 +34,23 @@ func (a *AuthAPI) Register(c *gin.Context) {
 		Password string `json:"password" binding:"required,min=6"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	if a.isAdminLogin(strings.TrimSpace(req.Email)) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "this login is reserved"})
+		apperr.Public(c, http.StatusBadRequest, "this login is reserved")
 		return
 	}
 
 	resp, err := a.authClient.Register(c.Request.Context(), req.Name, req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusCreated, resp)
@@ -62,7 +63,7 @@ func (a *AuthAPI) Login(c *gin.Context) {
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
@@ -72,26 +73,26 @@ func (a *AuthAPI) Login(c *gin.Context) {
 	}
 	password := req.Password
 	if login == "" || password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "login and password are required"})
+		apperr.Public(c, http.StatusBadRequest, "login and password are required")
 		return
 	}
 
 	// Regular users must provide a valid email; admin may use ADMIN_USERNAME as-is.
 	if !a.isAdminLogin(login) {
 		if _, err := mail.ParseAddress(login); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+			apperr.Public(c, http.StatusBadRequest, "invalid email")
 			return
 		}
 	}
 
 	resp, err := a.authClient.Login(c.Request.Context(), login, password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		apperr.Public(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusUnauthorized, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -100,7 +101,7 @@ func (a *AuthAPI) Login(c *gin.Context) {
 func (a *AuthAPI) Logout(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header required"})
+		apperr.Public(c, http.StatusBadRequest, "Authorization header required")
 		return
 	}
 
@@ -111,12 +112,12 @@ func (a *AuthAPI) Logout(c *gin.Context) {
 
 	resp, err := a.authClient.Logout(c.Request.Context(), token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -127,17 +128,17 @@ func (a *AuthAPI) RefreshToken(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	resp, err := a.authClient.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		apperr.Public(c, http.StatusUnauthorized, "Invalid refresh token")
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusUnauthorized, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -151,27 +152,27 @@ func (a *AuthAPI) GetMe(c *gin.Context) {
 
 	resp, err := a.authClient.GetUser(c.Request.Context(), user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	if resp.User == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		apperr.Public(c, http.StatusNotFound, "user not found")
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"user": gin.H{
-			"id":                       resp.User.Id,
-			"email":                    resp.User.Email,
-			"name":                     resp.User.Name,
-			"role":                     resp.User.Role,
-			"subscription_plan":        resp.User.SubscriptionPlan,
-			"subscription_active":      resp.User.SubscriptionActive,
-			"subscription_expires_at":  resp.User.SubscriptionExpiresAt,
+			"id":                      resp.User.Id,
+			"email":                   resp.User.Email,
+			"name":                    resp.User.Name,
+			"role":                    resp.User.Role,
+			"subscription_plan":       resp.User.SubscriptionPlan,
+			"subscription_active":     resp.User.SubscriptionActive,
+			"subscription_expires_at": resp.User.SubscriptionExpiresAt,
 		},
 	})
 }
@@ -179,18 +180,18 @@ func (a *AuthAPI) GetMe(c *gin.Context) {
 func (a *AuthAPI) GetUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	resp, err := a.authClient.GetUser(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -199,7 +200,7 @@ func (a *AuthAPI) GetUser(c *gin.Context) {
 func (a *AuthAPI) UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
@@ -210,18 +211,18 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 		Role     string `json:"role"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 
 	resp, err := a.authClient.UpdateUser(c.Request.Context(), userID, req.Name, req.Email, req.Password, req.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Response.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
@@ -230,18 +231,18 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 func (a *AuthAPI) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		apperr.Public(c, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	resp, err := a.authClient.DeleteUser(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	if resp != nil && !resp.Success {
-		c.JSON(http.StatusBadRequest, gin.H{"error": resp.Error})
+		apperr.Upstream(c, http.StatusBadRequest, resp.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)

@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/hh"
@@ -26,7 +27,7 @@ func (a *HHImportAPI) GetAuthURL(c *gin.Context) {
 
 	userID := c.Param("id")
 	if userID == "" || userID != user.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		apperr.Public(c, http.StatusForbidden, "access denied")
 		return
 	}
 
@@ -40,13 +41,13 @@ func (a *HHImportAPI) GetAuthURL(c *gin.Context) {
 
 	state, err := randomState()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create oauth state"})
+		apperr.Internal(c, err)
 		return
 	}
 
 	authURL, err := a.hhClient.AuthURL(state)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
@@ -64,7 +65,7 @@ func (a *HHImportAPI) ImportProfile(c *gin.Context) {
 
 	userID := c.Param("id")
 	if userID == "" || userID != user.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		apperr.Public(c, http.StatusForbidden, "access denied")
 		return
 	}
 
@@ -82,17 +83,17 @@ func (a *HHImportAPI) ImportProfile(c *gin.Context) {
 		ResumeID  string `json:"resume_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Bind(c, err)
 		return
 	}
 	if req.Code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "authorization code is required"})
+		apperr.Public(c, http.StatusBadRequest, "authorization code is required")
 		return
 	}
 
 	token, err := a.hhClient.ExchangeCode(c.Request.Context(), req.Code)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
@@ -103,19 +104,19 @@ func (a *HHImportAPI) ImportProfile(c *gin.Context) {
 
 	items, err := a.hhClient.ListMineResumes(c.Request.Context(), token.AccessToken)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
 	resumeID := hh.PickResumeID(items, preferredID)
 	if resumeID == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "у аккаунта hh.ru нет резюме"})
+		apperr.Public(c, http.StatusNotFound, "у аккаунта hh.ru нет резюме")
 		return
 	}
 
 	resume, err := a.hhClient.GetResume(c.Request.Context(), token.AccessToken, resumeID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apperr.Internal(c, err)
 		return
 	}
 
