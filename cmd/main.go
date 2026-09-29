@@ -12,6 +12,7 @@ import (
 	"github.com/LimeOnTop/interverse-gateway/internal/hh"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -55,11 +56,13 @@ func main() {
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
+	router.Use(middleware.Metrics())
 	router.Use(middleware.Logger())
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := router.Group("/api/v1")
 	{
