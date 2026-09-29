@@ -28,6 +28,7 @@ func main() {
 	reportClient := clients.NewReportClient(cfg.ReportServiceURL)
 	technologyClient := clients.NewTechnologyClient(cfg.TechnologyServiceURL)
 	questionClient := clients.NewQuestionClient(cfg.QuestionServiceURL)
+	vacancyClient := clients.NewVacancyClient(cfg.VacancyServiceURL)
 
 	jwtValidator := authjwt.NewValidator(cfg.JWTSecret)
 	accessRedis := redis.NewClient(&redis.Options{
@@ -41,10 +42,7 @@ func main() {
 	authAPI := api.NewAuthAPI(authClient, cfg.AdminUsername)
 	profileAPI := api.NewProfileAPI(profileClient)
 	hhClient := hh.NewClient(hh.Config{
-		ClientID:     cfg.HHClientID,
-		ClientSecret: cfg.HHClientSecret,
-		RedirectURI:  cfg.HHRedirectURI,
-		UserAgent:    cfg.HHUserAgent,
+		UserAgent: cfg.HHUserAgent,
 	})
 	hhImportAPI := api.NewHHImportAPI(hhClient)
 	interviewAPI := api.NewInterviewAPI(interviewClient, authClient)
@@ -53,6 +51,7 @@ func main() {
 	questionAPI := api.NewQuestionAPI(questionClient)
 	contributionAPI := api.NewContributionAPI(questionClient)
 	adminAPI := api.NewAdminAPI(questionClient)
+	vacancyAPI := api.NewVacancyAPI(vacancyClient)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -81,7 +80,6 @@ func main() {
 			users.DELETE("/:id", authAPI.DeleteUser)
 			users.GET("/:id/profile", profileAPI.GetProfile)
 			users.PUT("/:id/profile", profileAPI.UpdateProfile)
-			users.GET("/:id/profile/hh/auth-url", hhImportAPI.GetAuthURL)
 			users.POST("/:id/profile/import/hh", hhImportAPI.ImportProfile)
 		}
 
@@ -149,6 +147,12 @@ func main() {
 			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)
 			admin.POST("/moderation/questions/:id/approve", adminAPI.ApproveModerationQuestion)
 			admin.POST("/moderation/questions/:id/reject", adminAPI.RejectModerationQuestion)
+		}
+
+		vacancies := v1.Group("/vacancies")
+		vacancies.Use(requireAuth)
+		{
+			vacancies.GET("/", vacancyAPI.GetVacancies)
 		}
 	}
 

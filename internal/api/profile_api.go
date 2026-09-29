@@ -73,6 +73,7 @@ func (a *ProfileAPI) UpdateProfile(c *gin.Context) {
 		AboutMe         string `json:"about_me"`
 		HigherEducation string `json:"higher_education"`
 		EnglishLevel    string `json:"english_level"`
+		Skills          string `json:"skills"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apperr.Bind(c, err)
@@ -87,6 +88,7 @@ func (a *ProfileAPI) UpdateProfile(c *gin.Context) {
 		req.AboutMe,
 		req.HigherEducation,
 		req.EnglishLevel,
+		req.Skills,
 	)
 	if err != nil {
 		apperr.Internal(c, err)

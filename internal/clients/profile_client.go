@@ -23,7 +23,7 @@ func (c *ProfileClient) GetProfile(ctx context.Context, userID string) (*pb.GetP
 
 func (c *ProfileClient) UpdateProfile(
 	ctx context.Context,
-	userID, workExperience, avatarURL, aboutMe, higherEducation, englishLevel string,
+	userID, workExperience, avatarURL, aboutMe, higherEducation, englishLevel, skills string,
 ) (*pb.UpdateProfileResponse, error) {
 	req := &pb.UpdateProfileRequest{
 		UserId:          userID,
@@ -32,6 +32,7 @@ func (c *ProfileClient) UpdateProfile(
 		AboutMe:         aboutMe,
 		HigherEducation: higherEducation,
 		EnglishLevel:    englishLevel,
+		Skills:          skills,
 	}
 	return c.client.UpdateProfile(ctx, req)
 }

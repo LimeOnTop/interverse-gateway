@@ -16,13 +16,11 @@ type Config struct {
 	ReportServiceURL     string
 	TechnologyServiceURL string
 	QuestionServiceURL   string
+	VacancyServiceURL    string
 	JWTSecret            string
 	RedisAccessAddr      string
 	RedisAccessDB        int
 	AdminUsername        string
-	HHClientID           string
-	HHClientSecret       string
-	HHRedirectURI        string
 	HHUserAgent          string
 }
 
@@ -38,13 +36,11 @@ func Load() *Config {
 		ReportServiceURL:     getEnv("REPORT_SERVICE_URL", "report-service:50054"),
 		TechnologyServiceURL: getEnv("TECHNOLOGY_SERVICE_URL", "technology-service:50055"),
 		QuestionServiceURL:   getEnv("QUESTION_SERVICE_URL", "question-service:50056"),
+		VacancyServiceURL:    getEnv("VACANCY_SERVICE_URL", "vacancy-service:50058"),
 		JWTSecret:            getEnv("JWT_SECRET", "your-secret-key"),
 		RedisAccessAddr:      getEnv("REDIS_ACCESS_ADDR", "localhost:6379"),
 		RedisAccessDB:        getEnvInt("REDIS_ACCESS_DB", 1),
 		AdminUsername:        getEnv("ADMIN_USERNAME", ""),
-		HHClientID:           getEnv("HH_CLIENT_ID", ""),
-		HHClientSecret:       getEnv("HH_CLIENT_SECRET", ""),
-		HHRedirectURI:        getEnv("HH_REDIRECT_URI", "http://localhost:3000/profile"),
 		HHUserAgent:          getEnv("HH_USER_AGENT", "InterVerse/1.0 (dev@interverse.local)"),
 	}
 }

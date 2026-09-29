@@ -1,6 +1,7 @@
 package hh
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -11,6 +12,7 @@ type ImportedProfile struct {
 	AboutMe         string `json:"about_me"`
 	HigherEducation string `json:"higher_education"`
 	EnglishLevel    string `json:"english_level"`
+	Skills          string `json:"skills"`
 	ResumeID        string `json:"resume_id"`
 	ResumeTitle     string `json:"resume_title"`
 	Source          string `json:"source"`
@@ -23,6 +25,7 @@ func MapResume(resume Resume, avatarDataURL string) ImportedProfile {
 		AboutMe:         formatAboutMe(resume),
 		HigherEducation: formatEducation(resume),
 		EnglishLevel:    mapEnglishLevel(resume),
+		Skills:          formatSkills(resume),
 		ResumeID:        resume.ID,
 		ResumeTitle:     resume.Title,
 		Source:          "hh.ru",
@@ -30,7 +33,7 @@ func MapResume(resume Resume, avatarDataURL string) ImportedProfile {
 }
 
 func formatAboutMe(resume Resume) string {
-	parts := make([]string, 0, 3)
+	parts := make([]string, 0, 2)
 
 	if title := strings.TrimSpace(resume.Title); title != "" {
 		parts = append(parts, "Желаемая должность: "+title)
@@ -40,20 +43,32 @@ func formatAboutMe(resume Resume) string {
 		parts = append(parts, skills)
 	}
 
-	if len(resume.SkillSet) > 0 {
-		names := make([]string, 0, len(resume.SkillSet))
-		for _, skill := range resume.SkillSet {
-			name := strings.TrimSpace(skill.Name)
-			if name != "" {
-				names = append(names, name)
-			}
-		}
-		if len(names) > 0 {
-			parts = append(parts, "Ключевые навыки: "+strings.Join(names, ", "))
-		}
-	}
-
 	return strings.Join(parts, "\n\n")
+}
+
+func formatSkills(resume Resume) string {
+	names := make([]string, 0, len(resume.SkillSet))
+	seen := make(map[string]struct{}, len(resume.SkillSet))
+	for _, skill := range resume.SkillSet {
+		name := strings.TrimSpace(skill.Name)
+		if name == "" {
+			continue
+		}
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	encoded, err := json.Marshal(names)
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
 }
 
 func formatExperience(resume Resume) string {
