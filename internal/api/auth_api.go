@@ -177,10 +177,29 @@ func (a *AuthAPI) GetMe(c *gin.Context) {
 	})
 }
 
-func (a *AuthAPI) GetUser(c *gin.Context) {
+// authorizeUserAccess allows access to /users/:id only for the user themself or an admin.
+func authorizeUserAccess(c *gin.Context) (middleware.User, string, bool) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return middleware.User{}, "", false
+	}
+
 	userID := c.Param("id")
 	if userID == "" {
 		apperr.Public(c, http.StatusBadRequest, "user ID is required")
+		return middleware.User{}, "", false
+	}
+	if userID != user.ID && !middleware.IsAdmin(user) {
+		apperr.Public(c, http.StatusForbidden, "access denied")
+		return middleware.User{}, "", false
+	}
+
+	return user, userID, true
+}
+
+func (a *AuthAPI) GetUser(c *gin.Context) {
+	_, userID, ok := authorizeUserAccess(c)
+	if !ok {
 		return
 	}
 
@@ -198,9 +217,8 @@ func (a *AuthAPI) GetUser(c *gin.Context) {
 }
 
 func (a *AuthAPI) UpdateUser(c *gin.Context) {
-	userID := c.Param("id")
-	if userID == "" {
-		apperr.Public(c, http.StatusBadRequest, "user ID is required")
+	user, userID, ok := authorizeUserAccess(c)
+	if !ok {
 		return
 	}
 
@@ -212,6 +230,10 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apperr.Bind(c, err)
+		return
+	}
+	if req.Role != "" && !middleware.IsAdmin(user) {
+		apperr.Public(c, http.StatusForbidden, "only admin can change user role")
 		return
 	}
 
@@ -229,9 +251,8 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 }
 
 func (a *AuthAPI) DeleteUser(c *gin.Context) {
-	userID := c.Param("id")
-	if userID == "" {
-		apperr.Public(c, http.StatusBadRequest, "user ID is required")
+	_, userID, ok := authorizeUserAccess(c)
+	if !ok {
 		return
 	}
 

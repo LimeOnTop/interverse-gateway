@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,6 +39,7 @@ func (a *QuestionAPI) GetQuestions(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
+	redactQuestions(c, resp.Questions)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -58,6 +60,7 @@ func (a *QuestionAPI) GetQuestion(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
+	redactQuestions(c, []*pb.Question{resp.Question})
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -162,6 +165,7 @@ func (a *QuestionAPI) SearchQuestions(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
+	redactQuestions(c, resp.Questions)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -184,6 +188,7 @@ func (a *QuestionAPI) GetQuestionsByTechnology(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
+	redactQuestions(c, resp.Questions)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -197,4 +202,22 @@ func toProtoOptions(options []questionOptionRequest) []*pb.QuestionOption {
 		})
 	}
 	return result
+}
+
+// redactQuestions hides correct-answer markers and reference answers from
+// non-admin users so the question bank cannot be used to look up answers.
+func redactQuestions(c *gin.Context, questions []*pb.Question) {
+	// The questions group is behind AuthRequired, so the user is always present.
+	if user, ok := middleware.CurrentUser(c); ok && middleware.IsAdmin(user) {
+		return
+	}
+	for _, question := range questions {
+		if question == nil {
+			continue
+		}
+		question.Answer = ""
+		for _, option := range question.Options {
+			option.IsCorrect = false
+		}
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/gin-gonic/gin"
@@ -116,32 +117,52 @@ func (a *InterviewAPI) GetInterviews(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (a *InterviewAPI) GetInterview(c *gin.Context) {
+// loadOwnedInterview fetches the interview and makes sure it belongs to the
+// current user (admins may access any interview). Foreign interviews are
+// reported as not found so their existence is not disclosed.
+func (a *InterviewAPI) loadOwnedInterview(c *gin.Context) (*pb.GetInterviewResponse, bool) {
 	interviewID := c.Param("id")
 	if interviewID == "" {
 		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
-		return
+		return nil, false
+	}
+
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return nil, false
 	}
 
 	resp, err := a.interviewClient.GetInterview(c.Request.Context(), interviewID)
 	if err != nil {
 		apperr.Internal(c, err)
-		return
+		return nil, false
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
+		return nil, false
+	}
+	if resp.GetInterview() == nil || (resp.GetInterview().GetUserId() != user.ID && !middleware.IsAdmin(user)) {
+		apperr.Public(c, http.StatusNotFound, "interview not found")
+		return nil, false
+	}
+
+	return resp, true
+}
+
+func (a *InterviewAPI) GetInterview(c *gin.Context) {
+	resp, ok := a.loadOwnedInterview(c)
+	if !ok {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
 }
 
 func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
-	interviewID := c.Param("id")
-	if interviewID == "" {
-		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
+	if _, ok := a.loadOwnedInterview(c); !ok {
 		return
 	}
+	interviewID := c.Param("id")
 
 	var req struct {
 		Title          string `json:"title"`
@@ -175,11 +196,10 @@ func (a *InterviewAPI) UpdateInterview(c *gin.Context) {
 }
 
 func (a *InterviewAPI) DeleteInterview(c *gin.Context) {
-	interviewID := c.Param("id")
-	if interviewID == "" {
-		apperr.Public(c, http.StatusBadRequest, "interview ID is required")
+	if _, ok := a.loadOwnedInterview(c); !ok {
 		return
 	}
+	interviewID := c.Param("id")
 
 	resp, err := a.interviewClient.DeleteInterview(c.Request.Context(), interviewID)
 	if err != nil {

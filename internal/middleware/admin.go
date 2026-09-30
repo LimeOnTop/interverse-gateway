@@ -20,3 +20,8 @@ func AdminRequired() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// IsAdmin reports whether the authenticated user has the admin role.
+func IsAdmin(user User) bool {
+	return user.Role == "admin"
+}

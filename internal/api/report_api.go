@@ -100,25 +100,8 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 }
 
 func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
-	reportID := c.Param("id")
-	if reportID == "" {
-		apperr.Public(c, http.StatusBadRequest, "report ID is required")
-		return
-	}
-
-	user, ok := middleware.CurrentUser(c)
+	reportResp, user, ok := a.loadOwnedReport(c)
 	if !ok {
-		return
-	}
-
-	reportResp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
-	if err != nil {
-		apperr.Internal(c, err)
-		return
-	}
-
-	if reportResp.Response != nil && !reportResp.Response.Success {
-		apperr.Upstream(c, http.StatusBadRequest, reportResp.Response.Error)
 		return
 	}
 
@@ -224,21 +207,41 @@ func (a *ReportAPI) GetReports(c *gin.Context) {
 	})
 }
 
-func (a *ReportAPI) GetReport(c *gin.Context) {
+// loadOwnedReport fetches the report and makes sure it belongs to the current
+// user (admins may access any report). Foreign reports are reported as not found.
+func (a *ReportAPI) loadOwnedReport(c *gin.Context) (*pb.GetReportResponse, middleware.User, bool) {
 	reportID := c.Param("id")
 	if reportID == "" {
 		apperr.Public(c, http.StatusBadRequest, "report ID is required")
-		return
+		return nil, middleware.User{}, false
+	}
+
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return nil, middleware.User{}, false
 	}
 
 	resp, err := a.reportClient.GetReport(c.Request.Context(), reportID)
 	if err != nil {
 		apperr.Internal(c, err)
-		return
+		return nil, middleware.User{}, false
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
+		return nil, middleware.User{}, false
+	}
+	if resp.GetReport() == nil || (resp.GetReport().GetUserId() != user.ID && !middleware.IsAdmin(user)) {
+		apperr.Public(c, http.StatusNotFound, "report not found")
+		return nil, middleware.User{}, false
+	}
+
+	return resp, user, true
+}
+
+func (a *ReportAPI) GetReport(c *gin.Context) {
+	resp, _, ok := a.loadOwnedReport(c)
+	if !ok {
 		return
 	}
 
@@ -249,11 +252,10 @@ func (a *ReportAPI) GetReport(c *gin.Context) {
 }
 
 func (a *ReportAPI) UpdateReport(c *gin.Context) {
-	reportID := c.Param("id")
-	if reportID == "" {
-		apperr.Public(c, http.StatusBadRequest, "report ID is required")
+	if _, _, ok := a.loadOwnedReport(c); !ok {
 		return
 	}
+	reportID := c.Param("id")
 
 	var req struct {
 		OverallRating       string `json:"overall_rating"`
@@ -288,11 +290,10 @@ func (a *ReportAPI) UpdateReport(c *gin.Context) {
 }
 
 func (a *ReportAPI) DeleteReport(c *gin.Context) {
-	reportID := c.Param("id")
-	if reportID == "" {
-		apperr.Public(c, http.StatusBadRequest, "report ID is required")
+	if _, _, ok := a.loadOwnedReport(c); !ok {
 		return
 	}
+	reportID := c.Param("id")
 
 	resp, err := a.reportClient.DeleteReport(c.Request.Context(), reportID)
 	if err != nil {
