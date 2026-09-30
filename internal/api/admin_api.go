@@ -1,11 +1,12 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -252,4 +253,22 @@ func (a *AdminAPI) RejectModerationQuestion(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Вопрос отклонён и удалён"})
+}
+
+// GrafanaAuth is used by nginx auth_request before proxying /grafana/.
+// Returns 200 for admin JWTs and exposes X-Grafana-User for Grafana auth proxy.
+func (a *AdminAPI) GrafanaAuth(c *gin.Context) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
+	name := strings.TrimSpace(user.Email)
+	if name == "" {
+		name = strings.TrimSpace(user.ID)
+	}
+	if name == "" {
+		name = "admin"
+	}
+	c.Header("X-Grafana-User", name)
+	c.Status(http.StatusOK)
 }

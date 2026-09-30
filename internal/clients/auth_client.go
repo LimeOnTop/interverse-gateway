@@ -71,3 +71,11 @@ func (c *AuthClient) RefreshToken(ctx context.Context, refreshToken string) (*pb
 	}
 	return c.client.RefreshToken(ctx, req)
 }
+
+func (c *AuthClient) OAuthLogin(ctx context.Context, email, name, provider string) (*pb.OAuthLoginResponse, error) {
+	return c.client.OAuthLogin(ctx, &pb.OAuthLoginRequest{
+		Email:    email,
+		Name:     name,
+		Provider: provider,
+	})
+}

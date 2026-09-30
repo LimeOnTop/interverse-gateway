@@ -17,11 +17,16 @@ type Config struct {
 	TechnologyServiceURL string
 	QuestionServiceURL   string
 	VacancyServiceURL    string
+	PaymentServiceURL    string
 	JWTSecret            string
 	RedisAccessAddr      string
 	RedisAccessDB        int
 	AdminUsername        string
 	HHUserAgent          string
+	GoogleClientID       string
+	GoogleClientSecret   string
+	GoogleRedirectURL    string
+	FrontendURL          string
 }
 
 func Load() *Config {
@@ -37,11 +42,16 @@ func Load() *Config {
 		TechnologyServiceURL: getEnv("TECHNOLOGY_SERVICE_URL", "technology-service:50055"),
 		QuestionServiceURL:   getEnv("QUESTION_SERVICE_URL", "question-service:50056"),
 		VacancyServiceURL:    getEnv("VACANCY_SERVICE_URL", "vacancy-service:50058"),
+		PaymentServiceURL:    getEnv("PAYMENT_SERVICE_URL", "payment-service:50059"),
 		JWTSecret:            getEnv("JWT_SECRET", "your-secret-key"),
 		RedisAccessAddr:      getEnv("REDIS_ACCESS_ADDR", "localhost:6379"),
 		RedisAccessDB:        getEnvInt("REDIS_ACCESS_DB", 1),
 		AdminUsername:        getEnv("ADMIN_USERNAME", ""),
 		HHUserAgent:          getEnv("HH_USER_AGENT", "InterVerse/1.0 (dev@interverse.local)"),
+		GoogleClientID:       getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:   getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:    getEnv("GOOGLE_REDIRECT_URL", "https://inter-verse.ru/api/v1/auth/google/callback"),
+		FrontendURL:          getEnv("FRONTEND_URL", "https://inter-verse.ru"),
 	}
 }
 

@@ -30,11 +30,13 @@ func main() {
 	technologyClient := clients.NewTechnologyClient(cfg.TechnologyServiceURL)
 	questionClient := clients.NewQuestionClient(cfg.QuestionServiceURL)
 	vacancyClient := clients.NewVacancyClient(cfg.VacancyServiceURL)
+	paymentClient := clients.NewPaymentClient(cfg.PaymentServiceURL)
 
 	jwtValidator := authjwt.NewValidator(cfg.JWTSecret)
 	accessRedis := redis.NewClient(&redis.Options{
-		Addr: cfg.RedisAccessAddr,
-		DB:   cfg.RedisAccessDB,
+		Addr:       cfg.RedisAccessAddr,
+		DB:         cfg.RedisAccessDB,
+		ClientName: "api-gateway",
 	})
 	defer accessRedis.Close()
 	accessBlacklist := authjwt.NewAccessBlacklist(accessRedis)
@@ -53,6 +55,14 @@ func main() {
 	contributionAPI := api.NewContributionAPI(questionClient)
 	adminAPI := api.NewAdminAPI(questionClient)
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
+	paymentAPI := api.NewPaymentAPI(paymentClient)
+	googleOAuthAPI := api.NewGoogleOAuthAPI(
+		authClient,
+		cfg.GoogleClientID,
+		cfg.GoogleClientSecret,
+		cfg.GoogleRedirectURL,
+		cfg.FrontendURL,
+	)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -73,6 +83,8 @@ func main() {
 			auth.POST("/refresh", authAPI.RefreshToken)
 			auth.POST("/logout", requireAuth, authAPI.Logout)
 			auth.GET("/me", requireAuth, authAPI.GetMe)
+			auth.GET("/google/login", googleOAuthAPI.Login)
+			auth.GET("/google/callback", googleOAuthAPI.Callback)
 		}
 
 		users := v1.Group("/users")
@@ -150,12 +162,21 @@ func main() {
 			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)
 			admin.POST("/moderation/questions/:id/approve", adminAPI.ApproveModerationQuestion)
 			admin.POST("/moderation/questions/:id/reject", adminAPI.RejectModerationQuestion)
+			admin.GET("/grafana-auth", adminAPI.GrafanaAuth)
 		}
 
 		vacancies := v1.Group("/vacancies")
 		vacancies.Use(requireAuth)
 		{
 			vacancies.GET("/", vacancyAPI.GetVacancies)
+		}
+
+		payments := v1.Group("/payments")
+		{
+			// Robokassa ResultURL — no auth; must return plain text OK{InvId}
+			payments.POST("/robokassa/result", paymentAPI.RobokassaResult)
+			payments.GET("/robokassa/result", paymentAPI.RobokassaResult)
+			payments.POST("/", requireAuth, paymentAPI.CreatePayment)
 		}
 	}
 

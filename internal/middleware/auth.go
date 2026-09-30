@@ -10,31 +10,36 @@ import (
 
 const userContextKey = "auth_user"
 
+// AccessTokenCookie is read by AuthRequired for browser navigations (e.g. Grafana proxy).
+const AccessTokenCookie = "iv_access_token"
+
 type User struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
 }
 
+func extractAccessToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		token := strings.TrimSpace(authHeader[len("Bearer "):])
+		if token != "" {
+			return token
+		}
+	}
+	if cookie, err := c.Cookie(AccessTokenCookie); err == nil {
+		return strings.TrimSpace(cookie)
+	}
+	return ""
+}
+
 // AuthRequired validates JWT locally in the gateway (HMAC + optional Redis blacklist).
+// Accepts Authorization: Bearer <token> or cookie iv_access_token.
 func AuthRequired(validator *authjwt.Validator, blacklist *authjwt.AccessBlacklist) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			c.Abort()
-			return
-		}
-
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-			c.Abort()
-			return
-		}
-
-		token := strings.TrimSpace(authHeader[len("Bearer "):])
+		token := extractAccessToken(c)
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
 			c.Abort()
 			return
 		}
