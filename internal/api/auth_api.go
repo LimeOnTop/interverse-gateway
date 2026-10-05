@@ -53,6 +53,13 @@ func (a *AuthAPI) Register(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
+	if resp.VerificationRequired {
+		c.JSON(http.StatusAccepted, gin.H{
+			"verification_required": true,
+			"email":                 req.Email,
+		})
+		return
+	}
 	c.JSON(http.StatusCreated, resp)
 }
 
@@ -92,10 +99,69 @@ func (a *AuthAPI) Login(c *gin.Context) {
 	}
 
 	if resp.Response != nil && !resp.Response.Success {
+		if resp.VerificationRequired {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":                 "email not verified",
+				"verification_required": true,
+				"email":                 login,
+			})
+			return
+		}
 		apperr.Upstream(c, http.StatusUnauthorized, resp.Response.Error)
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthAPI) VerifyEmail(c *gin.Context) {
+	var req struct {
+		Email    string `json:"email" binding:"required,email"`
+		Code     string `json:"code" binding:"required,len=6,numeric"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apperr.Public(c, http.StatusBadRequest, "invalid email or code")
+		return
+	}
+
+	resp, err := a.authClient.VerifyEmail(c.Request.Context(), strings.TrimSpace(req.Email), req.Code, req.Password)
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if resp.Response != nil && !resp.Response.Success {
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthAPI) ResendEmailVerification(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apperr.Public(c, http.StatusBadRequest, "invalid email")
+		return
+	}
+
+	resp, err := a.authClient.SendEmailVerification(c.Request.Context(), strings.TrimSpace(req.Email))
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if resp.Response != nil && !resp.Response.Success {
+		if resp.RetryAfterSeconds > 0 {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":               "code was sent recently, try again later",
+				"retry_after_seconds": resp.RetryAfterSeconds,
+			})
+			return
+		}
+		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"retry_after_seconds": resp.RetryAfterSeconds})
 }
 
 func (a *AuthAPI) Logout(c *gin.Context) {

@@ -81,6 +81,8 @@ func main() {
 			auth.POST("/register", authAPI.Register)
 			auth.POST("/login", authAPI.Login)
 			auth.POST("/refresh", authAPI.RefreshToken)
+			auth.POST("/verify-email", authAPI.VerifyEmail)
+			auth.POST("/verify-email/resend", authAPI.ResendEmailVerification)
 			auth.POST("/logout", requireAuth, authAPI.Logout)
 			auth.GET("/me", requireAuth, authAPI.GetMe)
 			auth.GET("/google/login", googleOAuthAPI.Login)
