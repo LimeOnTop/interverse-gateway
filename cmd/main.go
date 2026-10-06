@@ -49,7 +49,7 @@ func main() {
 	})
 	hhImportAPI := api.NewHHImportAPI(hhClient)
 	interviewAPI := api.NewInterviewAPI(interviewClient, authClient)
-	reportAPI := api.NewReportAPI(reportClient)
+	reportAPI := api.NewReportAPI(reportClient, authClient)
 	technologyAPI := api.NewTechnologyAPI(technologyClient)
 	questionAPI := api.NewQuestionAPI(questionClient)
 	contributionAPI := api.NewContributionAPI(questionClient)

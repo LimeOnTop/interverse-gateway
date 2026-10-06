@@ -55,21 +55,7 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 		return
 	}
 
-	subscriptionPlan := "free"
-	if a.authClient != nil {
-		if userResp, err := a.authClient.GetUser(c.Request.Context(), user.ID); err == nil &&
-			userResp.Response != nil && userResp.Response.Success && userResp.User != nil {
-			if userResp.User.SubscriptionActive {
-				subscriptionPlan = "paid"
-			} else if userResp.User.SubscriptionPlan != "" {
-				subscriptionPlan = userResp.User.SubscriptionPlan
-			}
-			// Expired paid falls back to free for quotas.
-			if subscriptionPlan == "paid" && !userResp.User.SubscriptionActive {
-				subscriptionPlan = "free"
-			}
-		}
-	}
+	subscriptionPlan := subscriptionPlan(c.Request.Context(), a.authClient, user.ID)
 
 	resp, err := a.interviewClient.CreateInterview(
 		c.Request.Context(),
