@@ -91,3 +91,7 @@ func (c *AuthClient) VerifyEmail(ctx context.Context, email, code, password stri
 		Password: password,
 	})
 }
+
+func (c *AuthClient) GetRegistrationStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetRegistrationStatsResponse, error) {
+	return c.client.GetRegistrationStats(ctx, &pb.GetRegistrationStatsRequest{Periods: periods})
+}

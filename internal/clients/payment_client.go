@@ -24,6 +24,10 @@ func (c *PaymentClient) CreatePayment(ctx context.Context, userID, plan, email s
 	})
 }
 
+func (c *PaymentClient) GetOffers(ctx context.Context) (*pb.GetOffersResponse, error) {
+	return c.client.GetOffers(ctx, &pb.GetOffersRequest{})
+}
+
 func (c *PaymentClient) ConfirmResult(
 	ctx context.Context,
 	outSum string,
@@ -37,4 +41,8 @@ func (c *PaymentClient) ConfirmResult(
 		SignatureValue: signature,
 		Shp:            shp,
 	})
+}
+
+func (c *PaymentClient) GetPaymentStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetPaymentStatsResponse, error) {
+	return c.client.GetPaymentStats(ctx, &pb.GetPaymentStatsRequest{Periods: periods})
 }

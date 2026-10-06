@@ -3,6 +3,11 @@ package api
 import (
 	"net/http"
 	"strings"
+	"sync"
+	"time"
+
+	authpb "github.com/LimeOnTop/interverse-contracts/auth/gen"
+	paymentpb "github.com/LimeOnTop/interverse-contracts/payment/gen"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/clients"
@@ -12,10 +17,20 @@ import (
 
 type AdminAPI struct {
 	questionClient *clients.QuestionClient
+	authClient     *clients.AuthClient
+	paymentClient  *clients.PaymentClient
 }
 
-func NewAdminAPI(questionClient *clients.QuestionClient) *AdminAPI {
-	return &AdminAPI{questionClient: questionClient}
+func NewAdminAPI(
+	questionClient *clients.QuestionClient,
+	authClient *clients.AuthClient,
+	paymentClient *clients.PaymentClient,
+) *AdminAPI {
+	return &AdminAPI{
+		questionClient: questionClient,
+		authClient:     authClient,
+		paymentClient:  paymentClient,
+	}
 }
 
 func (a *AdminAPI) Stats(c *gin.Context) {
@@ -59,6 +74,93 @@ func (a *AdminAPI) Stats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"total_questions": total,
 		"by_difficulty":   byDifficulty,
+	})
+}
+
+// metricsLocation is Europe/Moscow. Moscow has had a fixed UTC+3 offset since 2014, so a fixed zone
+// avoids depending on tzdata in the container image.
+var metricsLocation = time.FixedZone("Europe/Moscow", 3*60*60)
+
+type periodCounts struct {
+	Today int64 `json:"today"`
+	Week  int64 `json:"week"`
+	Month int64 `json:"month"`
+	Total int64 `json:"total"`
+}
+
+// metricPeriods returns calendar boundaries in Moscow time: today from 00:00,
+// the last 7 days including today, and the current month from the 1st.
+func metricPeriods(now time.Time) (dayStart, weekStart, monthStart time.Time) {
+	local := now.In(metricsLocation)
+	dayStart = time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, metricsLocation)
+	weekStart = dayStart.AddDate(0, 0, -6)
+	monthStart = time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, metricsLocation)
+	return dayStart, weekStart, monthStart
+}
+
+// Metrics returns registrations and confirmed payments (any plan, status paid) per period.
+func (a *AdminAPI) Metrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	dayStart, weekStart, monthStart := metricPeriods(time.Now())
+
+	var (
+		wg             sync.WaitGroup
+		regResp        *authpb.GetRegistrationStatsResponse
+		payResp        *paymentpb.GetPaymentStatsResponse
+		regErr, payErr error
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		regResp, regErr = a.authClient.GetRegistrationStats(ctx, &authpb.PeriodBoundaries{
+			DayStartUnix:   dayStart.Unix(),
+			WeekStartUnix:  weekStart.Unix(),
+			MonthStartUnix: monthStart.Unix(),
+		})
+	}()
+	go func() {
+		defer wg.Done()
+		payResp, payErr = a.paymentClient.GetPaymentStats(ctx, &paymentpb.PeriodBoundaries{
+			DayStartUnix:   dayStart.Unix(),
+			WeekStartUnix:  weekStart.Unix(),
+			MonthStartUnix: monthStart.Unix(),
+		})
+	}()
+	wg.Wait()
+
+	if regErr != nil {
+		apperr.Internal(c, regErr)
+		return
+	}
+	if regResp.Response != nil && !regResp.Response.Success {
+		apperr.Upstream(c, http.StatusBadGateway, regResp.Response.Error)
+		return
+	}
+	if payErr != nil {
+		apperr.Internal(c, payErr)
+		return
+	}
+	if payResp.Response != nil && !payResp.Response.Success {
+		apperr.Upstream(c, http.StatusBadGateway, payResp.Response.Error)
+		return
+	}
+
+	registrations := periodCounts{}
+	if r := regResp.GetRegistrations(); r != nil {
+		registrations = periodCounts{Today: r.Today, Week: r.Week, Month: r.Month, Total: r.Total}
+	}
+	payments := periodCounts{}
+	if p := payResp.GetPaid(); p != nil {
+		payments = periodCounts{Today: p.Today, Week: p.Week, Month: p.Month, Total: p.Total}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"timezone":      "Europe/Moscow",
+		"day_start":     dayStart.Format(time.RFC3339),
+		"week_start":    weekStart.Format(time.RFC3339),
+		"month_start":   monthStart.Format(time.RFC3339),
+		"registrations": registrations,
+		"payments":      payments,
 	})
 }
 

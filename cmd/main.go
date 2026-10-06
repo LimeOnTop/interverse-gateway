@@ -53,7 +53,7 @@ func main() {
 	technologyAPI := api.NewTechnologyAPI(technologyClient)
 	questionAPI := api.NewQuestionAPI(questionClient)
 	contributionAPI := api.NewContributionAPI(questionClient)
-	adminAPI := api.NewAdminAPI(questionClient)
+	adminAPI := api.NewAdminAPI(questionClient, authClient, paymentClient)
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
 	paymentAPI := api.NewPaymentAPI(paymentClient)
 	googleOAuthAPI := api.NewGoogleOAuthAPI(
@@ -69,9 +69,12 @@ func main() {
 	router.Use(middleware.Metrics())
 	router.Use(middleware.Logger())
 
-	router.GET("/health", func(c *gin.Context) {
+	health := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	}
+	router.GET("/health", health)
+	// Docker healthcheck uses `wget --spider`, which sends HEAD.
+	router.HEAD("/health", health)
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := router.Group("/api/v1")
@@ -160,6 +163,7 @@ func main() {
 		admin.Use(requireAuth, middleware.AdminRequired())
 		{
 			admin.GET("/stats", adminAPI.Stats)
+			admin.GET("/metrics", adminAPI.Metrics)
 			admin.GET("/questions", adminAPI.ListQuestions)
 			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)
 			admin.POST("/moderation/questions/:id/approve", adminAPI.ApproveModerationQuestion)
@@ -178,6 +182,7 @@ func main() {
 			// Robokassa ResultURL — no auth; must return plain text OK{InvId}
 			payments.POST("/robokassa/result", paymentAPI.RobokassaResult)
 			payments.GET("/robokassa/result", paymentAPI.RobokassaResult)
+			payments.GET("/offers", paymentAPI.GetOffers)
 			payments.POST("/", requireAuth, paymentAPI.CreatePayment)
 		}
 	}
