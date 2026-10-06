@@ -102,11 +102,12 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		return
 	}
 
+	full := a.fullReportAccess(c, user)
 	reportMap := protoReportToMap(resp.GetReport())
 	c.JSON(http.StatusCreated, gin.H{
 		"response": resp.GetResponse(),
-		"report":   mapReportResponse(reportMap, a.fullReportAccess(c, user)),
-		"scores":   resp.GetScores(),
+		"report":   mapReportResponse(reportMap, full),
+		"scores":   visibleScores(resp.GetScores(), full),
 	})
 }
 
@@ -157,7 +158,7 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"response": resp.GetResponse(),
 		"report":   mapReportResponse(reportMap, full),
-		"scores":   resp.GetScores(),
+		"scores":   visibleScores(resp.GetScores(), full),
 	})
 }
 
@@ -324,4 +325,18 @@ func (a *ReportAPI) DeleteReport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// visibleScores drops the AI comments for Basic users: they name weak topics.
+func visibleScores(scores *pb.AnalysisScores, full bool) *pb.AnalysisScores {
+	if scores == nil || full {
+		return scores
+	}
+	return &pb.AnalysisScores{
+		OverallScore:      scores.GetOverallScore(),
+		AlgorithmScore:    scores.GetAlgorithmScore(),
+		ArchitectureScore: scores.GetArchitectureScore(),
+		CodingScore:       scores.GetCodingScore(),
+		SoftSkillsScore:   scores.GetSoftSkillsScore(),
+	}
 }

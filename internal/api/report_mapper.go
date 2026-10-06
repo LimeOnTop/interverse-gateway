@@ -18,6 +18,7 @@ type reportMetadata struct {
 	CodingPassed            bool                 `json:"coding_passed"`
 	SoftSkillsPassed        bool                 `json:"soft_skills_passed"`
 	Comments                string               `json:"comments"`
+	SummaryPublic           string               `json:"summary_public"`
 	InterviewTitle          string               `json:"interview_title"`
 	InterviewLevel          string               `json:"interview_level"`
 	InterviewSpecialization string               `json:"interview_specialization"`
@@ -124,9 +125,16 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 	}
 
 	weaknesses := report["weaknesses"]
+	strengths := report["strengths"]
+	recommendations := report["recommendations"]
 	if !full {
+		// Comments, strengths and recommendations name the weak topics, so
+		// Basic gets only the topic-free public summary (empty for old reports).
 		answerReviews = []reportAnswerReview{}
 		weaknesses = ""
+		strengths = ""
+		recommendations = ""
+		comments = metadata.SummaryPublic
 	}
 	visibleWeakPoints := weakPoints
 	if !full {
@@ -147,8 +155,8 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		"coding_passed":       codingPassed,
 		"soft_skills_passed":  softSkillsPassed,
 		"comments":            comments,
-		"recommendations":     report["recommendations"],
-		"strengths":           report["strengths"],
+		"recommendations":     recommendations,
+		"strengths":           strengths,
 		"weaknesses":          weaknesses,
 		"ai_analyzed":         aiAnalyzed,
 		"created_at":          report["created_at"],
