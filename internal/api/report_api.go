@@ -12,12 +12,23 @@ import (
 
 type ReportAPI struct {
 	reportClient *clients.ReportClient
+	authClient   *clients.AuthClient
 }
 
-func NewReportAPI(reportClient *clients.ReportClient) *ReportAPI {
+func NewReportAPI(reportClient *clients.ReportClient, authClient *clients.AuthClient) *ReportAPI {
 	return &ReportAPI{
 		reportClient: reportClient,
+		authClient:   authClient,
 	}
+}
+
+// fullReportAccess tells whether weak points and answer reviews may be shown:
+// they are a Pro feature, so Basic users get only the count.
+func (a *ReportAPI) fullReportAccess(c *gin.Context, user middleware.User) bool {
+	if middleware.IsAdmin(user) {
+		return true
+	}
+	return subscriptionPlan(c.Request.Context(), a.authClient, user.ID) == planPaid
 }
 
 func (a *ReportAPI) CreateReport(c *gin.Context) {
@@ -91,11 +102,12 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		return
 	}
 
+	full := a.fullReportAccess(c, user)
 	reportMap := protoReportToMap(resp.GetReport())
 	c.JSON(http.StatusCreated, gin.H{
 		"response": resp.GetResponse(),
-		"report":   mapReportResponse(reportMap),
-		"scores":   resp.GetScores(),
+		"report":   mapReportResponse(reportMap, full),
+		"scores":   visibleScores(resp.GetScores(), full),
 	})
 }
 
@@ -111,7 +123,8 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 		return
 	}
 
-	mapped := mapReportResponse(protoReportToMap(report))
+	full := a.fullReportAccess(c, user)
+	mapped := mapReportResponse(protoReportToMap(report), full)
 	if analyzed, ok := mapped["ai_analyzed"].(bool); ok && analyzed {
 		c.JSON(http.StatusOK, gin.H{
 			"response": gin.H{"success": true, "message": "Report already analyzed"},
@@ -144,8 +157,8 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 	reportMap := protoReportToMap(resp.GetReport())
 	c.JSON(http.StatusOK, gin.H{
 		"response": resp.GetResponse(),
-		"report":   mapReportResponse(reportMap),
-		"scores":   resp.GetScores(),
+		"report":   mapReportResponse(reportMap, full),
+		"scores":   visibleScores(resp.GetScores(), full),
 	})
 }
 
@@ -195,9 +208,10 @@ func (a *ReportAPI) GetReports(c *gin.Context) {
 		return
 	}
 
+	full := a.fullReportAccess(c, user)
 	reports := make([]map[string]any, 0, len(resp.GetReports()))
 	for _, report := range resp.GetReports() {
-		reports = append(reports, mapReportResponse(protoReportToMap(report)))
+		reports = append(reports, mapReportResponse(protoReportToMap(report), full))
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -240,19 +254,20 @@ func (a *ReportAPI) loadOwnedReport(c *gin.Context) (*pb.GetReportResponse, midd
 }
 
 func (a *ReportAPI) GetReport(c *gin.Context) {
-	resp, _, ok := a.loadOwnedReport(c)
+	resp, user, ok := a.loadOwnedReport(c)
 	if !ok {
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"response": resp.GetResponse(),
-		"report":   mapReportResponse(protoReportToMap(resp.GetReport())),
+		"report":   mapReportResponse(protoReportToMap(resp.GetReport()), a.fullReportAccess(c, user)),
 	})
 }
 
 func (a *ReportAPI) UpdateReport(c *gin.Context) {
-	if _, _, ok := a.loadOwnedReport(c); !ok {
+	_, user, ok := a.loadOwnedReport(c)
+	if !ok {
 		return
 	}
 	reportID := c.Param("id")
@@ -286,7 +301,11 @@ func (a *ReportAPI) UpdateReport(c *gin.Context) {
 		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
 		return
 	}
-	c.JSON(http.StatusOK, resp)
+	// Never echo raw notes: they carry Pro-only weak points.
+	c.JSON(http.StatusOK, gin.H{
+		"response": resp.GetResponse(),
+		"report":   mapReportResponse(protoReportToMap(resp.GetReport()), a.fullReportAccess(c, user)),
+	})
 }
 
 func (a *ReportAPI) DeleteReport(c *gin.Context) {
@@ -306,4 +325,18 @@ func (a *ReportAPI) DeleteReport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// visibleScores drops the AI comments for Basic users: they name weak topics.
+func visibleScores(scores *pb.AnalysisScores, full bool) *pb.AnalysisScores {
+	if scores == nil || full {
+		return scores
+	}
+	return &pb.AnalysisScores{
+		OverallScore:      scores.GetOverallScore(),
+		AlgorithmScore:    scores.GetAlgorithmScore(),
+		ArchitectureScore: scores.GetArchitectureScore(),
+		CodingScore:       scores.GetCodingScore(),
+		SoftSkillsScore:   scores.GetSoftSkillsScore(),
+	}
 }

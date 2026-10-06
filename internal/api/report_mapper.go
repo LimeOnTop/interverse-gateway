@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -17,11 +18,26 @@ type reportMetadata struct {
 	CodingPassed            bool                 `json:"coding_passed"`
 	SoftSkillsPassed        bool                 `json:"soft_skills_passed"`
 	Comments                string               `json:"comments"`
+	SummaryPublic           string               `json:"summary_public"`
 	InterviewTitle          string               `json:"interview_title"`
 	InterviewLevel          string               `json:"interview_level"`
 	InterviewSpecialization string               `json:"interview_specialization"`
 	InterviewScheduledAt    string               `json:"interview_scheduled_at"`
 	AnswerReviews           []reportAnswerReview `json:"answer_reviews"`
+	WeakPoints              []reportWeakPoint    `json:"weak_points"`
+}
+
+type reportWeakPoint struct {
+	StepID        string `json:"step_id"`
+	ItemType      string `json:"item_type"`
+	Label         string `json:"label"`
+	Prompt        string `json:"prompt"`
+	Technology    string `json:"technology,omitempty"`
+	UserAnswer    string `json:"user_answer"`
+	CorrectAnswer string `json:"correct_answer"`
+	Explanation   string `json:"explanation,omitempty"`
+	Topic         string `json:"topic"`
+	SourceURL     string `json:"source_url"`
 }
 
 type reportAnswerReview struct {
@@ -40,7 +56,10 @@ type reportAnswerReview struct {
 	IsCorrect     *bool    `json:"is_correct,omitempty"`
 }
 
-func mapReportResponse(report map[string]any) map[string]any {
+// mapReportResponse flattens a stored report for the UI. Without full access
+// (Basic plan) weak points, answer reviews and weaknesses are stripped and only
+// the number of weak points is returned.
+func mapReportResponse(report map[string]any, full bool) map[string]any {
 	if report == nil {
 		return nil
 	}
@@ -95,6 +114,32 @@ func mapReportResponse(report map[string]any) map[string]any {
 	if answerReviews == nil {
 		answerReviews = []reportAnswerReview{}
 	}
+	if real, ok := realOverallScore(answerReviews, algorithmScore, codingScore); ok {
+		overallScore = real
+	}
+
+	weakPoints := metadata.WeakPoints
+	if weakPoints == nil {
+		// Reports generated before weak points existed.
+		weakPoints = weakPointsFromReviews(answerReviews, codingPassed)
+	}
+
+	weaknesses := report["weaknesses"]
+	strengths := report["strengths"]
+	recommendations := report["recommendations"]
+	if !full {
+		// Comments, strengths and recommendations name the weak topics, so
+		// Basic gets only the topic-free public summary (empty for old reports).
+		answerReviews = []reportAnswerReview{}
+		weaknesses = ""
+		strengths = ""
+		recommendations = ""
+		comments = metadata.SummaryPublic
+	}
+	visibleWeakPoints := weakPoints
+	if !full {
+		visibleWeakPoints = []reportWeakPoint{}
+	}
 
 	return map[string]any{
 		"id":                  report["id"],
@@ -110,12 +155,15 @@ func mapReportResponse(report map[string]any) map[string]any {
 		"coding_passed":       codingPassed,
 		"soft_skills_passed":  softSkillsPassed,
 		"comments":            comments,
-		"recommendations":     report["recommendations"],
-		"strengths":           report["strengths"],
-		"weaknesses":          report["weaknesses"],
+		"recommendations":     recommendations,
+		"strengths":           strengths,
+		"weaknesses":          weaknesses,
 		"ai_analyzed":         aiAnalyzed,
 		"created_at":          report["created_at"],
 		"answer_reviews":      answerReviews,
+		"weak_points":         visibleWeakPoints,
+		"weak_points_count":   len(weakPoints),
+		"locked":              !full,
 		"interview": map[string]any{
 			"id":             report["interview_id"],
 			"title":          title,
@@ -175,4 +223,71 @@ func protoReportToMap(report any) map[string]any {
 
 func isFallbackReport(comments string) bool {
 	return strings.Contains(comments, "AI-анализ временно недоступен")
+}
+
+// realOverallScore recomputes the overall result as the mean of the sections
+// the session had, so old reports that stored 0 for failed sections show the
+// real percentage.
+func realOverallScore(reviews []reportAnswerReview, theory, coding int) (int, bool) {
+	hasQuestions, hasTasks := false, false
+	for _, review := range reviews {
+		if review.ItemType == "task" {
+			hasTasks = true
+		} else {
+			hasQuestions = true
+		}
+	}
+	scores := make([]int, 0, 2)
+	if hasQuestions {
+		scores = append(scores, theory)
+	}
+	if hasTasks {
+		scores = append(scores, coding)
+	}
+	if len(scores) == 0 {
+		return 0, false
+	}
+	sum := 0
+	for _, score := range scores {
+		sum += score
+	}
+	return int(float64(sum)/float64(len(scores)) + 0.5), true
+}
+
+func weakPointsFromReviews(reviews []reportAnswerReview, codingPassed bool) []reportWeakPoint {
+	points := []reportWeakPoint{}
+	for _, review := range reviews {
+		if review.ItemType == "task" {
+			if codingPassed && review.UserAnswer != "Нет ответа" {
+				continue
+			}
+		} else if review.IsCorrect != nil && *review.IsCorrect {
+			continue
+		}
+		topic := reviewTopic(review)
+		points = append(points, reportWeakPoint{
+			StepID:        review.StepID,
+			ItemType:      review.ItemType,
+			Label:         review.Label,
+			Prompt:        review.Prompt,
+			Technology:    review.Technology,
+			UserAnswer:    review.UserAnswer,
+			CorrectAnswer: review.CorrectAnswer,
+			Topic:         topic,
+			SourceURL:     "https://habr.com/ru/search/?q=" + url.QueryEscape(topic) + "&target_type=posts&order=relevance",
+		})
+	}
+	return points
+}
+
+func reviewTopic(review reportAnswerReview) string {
+	words := strings.Fields(review.Prompt)
+	if len(words) > 8 {
+		words = words[:8]
+	}
+	topic := strings.Trim(strings.Join(words, " "), " ?.:,")
+	if review.Technology != "" && !strings.Contains(strings.ToLower(topic), strings.ToLower(review.Technology)) {
+		topic = strings.TrimSpace(review.Technology + " " + topic)
+	}
+	return topic
 }
