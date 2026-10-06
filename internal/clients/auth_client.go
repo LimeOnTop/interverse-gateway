@@ -79,3 +79,19 @@ func (c *AuthClient) OAuthLogin(ctx context.Context, email, name, provider strin
 		Provider: provider,
 	})
 }
+
+func (c *AuthClient) SendEmailVerification(ctx context.Context, email string) (*pb.SendEmailVerificationResponse, error) {
+	return c.client.SendEmailVerification(ctx, &pb.SendEmailVerificationRequest{Email: email})
+}
+
+func (c *AuthClient) VerifyEmail(ctx context.Context, email, code, password string) (*pb.VerifyEmailResponse, error) {
+	return c.client.VerifyEmail(ctx, &pb.VerifyEmailRequest{
+		Email:    email,
+		Code:     code,
+		Password: password,
+	})
+}
+
+func (c *AuthClient) GetRegistrationStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetRegistrationStatsResponse, error) {
+	return c.client.GetRegistrationStats(ctx, &pb.GetRegistrationStatsRequest{Periods: periods})
+}

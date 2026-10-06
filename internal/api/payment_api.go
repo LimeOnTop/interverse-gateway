@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +36,7 @@ func (a *PaymentAPI) CreatePayment(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 	plan := strings.TrimSpace(req.Plan)
 	if plan == "" {
-		plan = "paid"
+		plan = "paid_1m"
 	}
 
 	resp, err := a.paymentClient.CreatePayment(c.Request.Context(), user.ID, plan, user.Email)
@@ -65,6 +66,39 @@ func (a *PaymentAPI) CreatePayment(c *gin.Context) {
 			"method": payment.GetMethod(),
 			"fields": payment.GetFields(),
 		},
+	})
+}
+
+func (a *PaymentAPI) GetOffers(c *gin.Context) {
+	resp, err := a.paymentClient.GetOffers(c.Request.Context())
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if resp.GetResponse() != nil && !resp.GetResponse().GetSuccess() {
+		apperr.Upstream(c, http.StatusBadRequest, resp.GetResponse().GetError())
+		return
+	}
+
+	offers := make([]gin.H, 0, len(resp.GetOffers()))
+	for _, offer := range resp.GetOffers() {
+		offers = append(offers, gin.H{
+			"id":            offer.GetId(),
+			"name":          offer.GetName(),
+			"price":         offer.GetPrice(),
+			"regular_price": offer.GetRegularPrice(),
+			"duration_days": offer.GetDurationDays(),
+			"price_hint":    offer.GetPriceHint(),
+			"description":   offer.GetDescription(),
+			"badge":         offer.GetBadge(),
+			"early_bird":    offer.GetEarlyBird(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"offers":               offers,
+		"early_bird_remaining": resp.GetEarlyBirdRemaining(),
+		"early_bird_limit":     resp.GetEarlyBirdLimit(),
 	})
 }
 
@@ -100,10 +134,12 @@ func (a *PaymentAPI) RobokassaResult(c *gin.Context) {
 
 	resp, err := a.paymentClient.ConfirmResult(c.Request.Context(), outSum, inv, signature, shp)
 	if err != nil {
+		log.Printf("robokassa result: inv %d: confirm failed: %v", inv, err)
 		c.String(http.StatusInternalServerError, "confirm failed")
 		return
 	}
 	if resp.GetResponse() != nil && !resp.GetResponse().GetSuccess() {
+		log.Printf("robokassa result: inv %d: rejected: %s", inv, resp.GetResponse().GetError())
 		c.String(http.StatusBadRequest, "confirm rejected")
 		return
 	}
