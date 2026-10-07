@@ -46,3 +46,7 @@ func (c *PaymentClient) ConfirmResult(
 func (c *PaymentClient) GetPaymentStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetPaymentStatsResponse, error) {
 	return c.client.GetPaymentStats(ctx, &pb.GetPaymentStatsRequest{Periods: periods})
 }
+
+func (c *PaymentClient) ListUserPayments(ctx context.Context, userID string) (*pb.ListUserPaymentsResponse, error) {
+	return c.client.ListUserPayments(ctx, &pb.ListUserPaymentsRequest{UserId: userID})
+}

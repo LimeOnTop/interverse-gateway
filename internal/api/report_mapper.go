@@ -26,6 +26,8 @@ type reportMetadata struct {
 	AnswerReviews           []reportAnswerReview `json:"answer_reviews"`
 	WeakPoints              []reportWeakPoint    `json:"weak_points"`
 	AnalysisMode            string               `json:"analysis_mode"`
+	MCQCorrect              int                  `json:"mcq_correct"`
+	MCQTotal                int                  `json:"mcq_total"`
 }
 
 type reportWeakPoint struct {
@@ -126,6 +128,24 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		weakPoints = weakPointsFromReviews(answerReviews, codingPassed)
 	}
 
+	questionTotal, taskTotal, technologies := reviewTotals(answerReviews)
+	theoryTotal := metadata.MCQTotal
+	if theoryTotal == 0 {
+		theoryTotal = questionTotal
+	}
+	theoryCorrect := metadata.MCQCorrect
+	if metadata.MCQTotal == 0 {
+		theoryCorrect = 0
+		for _, review := range answerReviews {
+			if review.ItemType != "task" && review.IsCorrect != nil && *review.IsCorrect {
+				theoryCorrect++
+			}
+		}
+	}
+	headline := reportHeadline(algorithmScore, codingScore, theoryTotal > 0, taskTotal > 0)
+	groups := focusGroups(weakPoints)
+	focusCount := len(groups)
+
 	weaknesses := report["weaknesses"]
 	strengths := report["strengths"]
 	recommendations := report["recommendations"]
@@ -141,6 +161,7 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 	visibleWeakPoints := weakPoints
 	if !full {
 		visibleWeakPoints = []reportWeakPoint{}
+		groups = []reportFocusGroup{}
 	}
 
 	return map[string]any{
@@ -166,6 +187,13 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		"weak_points":         visibleWeakPoints,
 		"weak_points_count":   len(weakPoints),
 		"locked":              !full,
+		"headline":            headline,
+		"theory_correct":      theoryCorrect,
+		"theory_total":        theoryTotal,
+		"task_total":          taskTotal,
+		"technologies":        technologies,
+		"focus":               groups,
+		"focus_count":         focusCount,
 		"interview": map[string]any{
 			"id":             report["interview_id"],
 			"title":          title,
