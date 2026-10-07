@@ -25,10 +25,15 @@ func NewReportAPI(reportClient *clients.ReportClient, authClient *clients.AuthCl
 // fullReportAccess tells whether weak points and answer reviews may be shown:
 // they are a Pro feature, so Basic users get only the count.
 func (a *ReportAPI) fullReportAccess(c *gin.Context, user middleware.User) bool {
+	return a.reportPlan(c, user) == planPaid
+}
+
+// reportPlan is the plan reports are built and shown for; admins count as Pro.
+func (a *ReportAPI) reportPlan(c *gin.Context, user middleware.User) string {
 	if middleware.IsAdmin(user) {
-		return true
+		return planPaid
 	}
-	return subscriptionPlan(c.Request.Context(), a.authClient, user.ID) == planPaid
+	return subscriptionPlan(c.Request.Context(), a.authClient, user.ID)
 }
 
 func (a *ReportAPI) CreateReport(c *gin.Context) {
@@ -86,11 +91,13 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		return
 	}
 
+	plan := a.reportPlan(c, user)
 	resp, err := a.reportClient.GenerateReport(
 		c.Request.Context(),
 		req.InterviewID,
 		user.ID,
 		toSessionAnswerInputs(req.Answers),
+		plan,
 	)
 	if err != nil {
 		apperr.Internal(c, err)
@@ -102,7 +109,7 @@ func (a *ReportAPI) GenerateReport(c *gin.Context) {
 		return
 	}
 
-	full := a.fullReportAccess(c, user)
+	full := plan == planPaid
 	reportMap := protoReportToMap(resp.GetReport())
 	c.JSON(http.StatusCreated, gin.H{
 		"response": resp.GetResponse(),
@@ -123,7 +130,8 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 		return
 	}
 
-	full := a.fullReportAccess(c, user)
+	plan := a.reportPlan(c, user)
+	full := plan == planPaid
 	mapped := mapReportResponse(protoReportToMap(report), full)
 	if analyzed, ok := mapped["ai_analyzed"].(bool); ok && analyzed {
 		c.JSON(http.StatusOK, gin.H{
@@ -143,6 +151,7 @@ func (a *ReportAPI) AnalyzeReport(c *gin.Context) {
 		report.GetInterviewId(),
 		user.ID,
 		toSessionAnswerInputs(req.Answers),
+		plan,
 	)
 	if err != nil {
 		apperr.Internal(c, err)

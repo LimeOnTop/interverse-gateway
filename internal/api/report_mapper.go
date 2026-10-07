@@ -25,6 +25,7 @@ type reportMetadata struct {
 	InterviewScheduledAt    string               `json:"interview_scheduled_at"`
 	AnswerReviews           []reportAnswerReview `json:"answer_reviews"`
 	WeakPoints              []reportWeakPoint    `json:"weak_points"`
+	AnalysisMode            string               `json:"analysis_mode"`
 }
 
 type reportWeakPoint struct {
@@ -103,7 +104,8 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		title = "Тренировка"
 	}
 
-	aiAnalyzed := !isFallbackReport(comments)
+	// A Basic (no LLM) report can be re-analyzed once the user has Pro.
+	aiAnalyzed := !isFallbackReport(comments) && !(full && metadata.AnalysisMode == "basic")
 
 	algorithmPassed := resolveSectionPassed(metadata.AlgorithmPassed, algorithmScore)
 	architecturePassed := resolveSectionPassed(metadata.ArchitecturePassed, metadata.ArchitectureScore)
@@ -130,7 +132,7 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 	if !full {
 		// Comments, strengths and recommendations name the weak topics, so
 		// Basic gets only the topic-free public summary (empty for old reports).
-		answerReviews = []reportAnswerReview{}
+		answerReviews = answeredOnly(answerReviews)
 		weaknesses = ""
 		strengths = ""
 		recommendations = ""
@@ -290,4 +292,22 @@ func reviewTopic(review reportAnswerReview) string {
 		topic = strings.TrimSpace(review.Technology + " " + topic)
 	}
 	return topic
+}
+
+// answeredOnly keeps the questions and the user's own answers for Basic: no
+// correct answers, options or verdicts that would reveal the weak points.
+func answeredOnly(reviews []reportAnswerReview) []reportAnswerReview {
+	out := make([]reportAnswerReview, 0, len(reviews))
+	for _, review := range reviews {
+		out = append(out, reportAnswerReview{
+			StepID:     review.StepID,
+			ItemType:   review.ItemType,
+			SortOrder:  review.SortOrder,
+			Label:      review.Label,
+			Prompt:     review.Prompt,
+			Technology: review.Technology,
+			UserAnswer: review.UserAnswer,
+		})
+	}
+	return out
 }

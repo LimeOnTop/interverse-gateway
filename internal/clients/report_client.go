@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
+	"google.golang.org/grpc/metadata"
 )
 
 type ReportClient struct {
@@ -21,12 +22,15 @@ func (c *ReportClient) GenerateReport(
 	ctx context.Context,
 	interviewID, userID string,
 	answers []*pb.SessionAnswerInput,
+	subscriptionPlan string,
 ) (*pb.GenerateReportResponse, error) {
 	req := &pb.GenerateReportRequest{
 		InterviewId: interviewID,
 		UserId:      userID,
 		Answers:     answers,
 	}
+	// Basic ("free") reports are built without the LLM.
+	ctx = metadata.AppendToOutgoingContext(ctx, "x-subscription-plan", subscriptionPlan)
 	return c.client.GenerateReport(ctx, req)
 }
 
