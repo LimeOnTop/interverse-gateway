@@ -20,6 +20,41 @@ func NewPaymentAPI(paymentClient *clients.PaymentClient) *PaymentAPI {
 	return &PaymentAPI{paymentClient: paymentClient}
 }
 
+// History lists the current user's paid orders, newest first.
+func (a *PaymentAPI) History(c *gin.Context) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
+	if middleware.IsAdmin(user) {
+		c.JSON(http.StatusOK, gin.H{"payments": []any{}})
+		return
+	}
+
+	resp, err := a.paymentClient.ListUserPayments(c.Request.Context(), user.ID)
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if resp.GetResponse() != nil && !resp.GetResponse().GetSuccess() {
+		apperr.Upstream(c, http.StatusBadRequest, resp.GetResponse().GetError())
+		return
+	}
+
+	payments := make([]gin.H, 0, len(resp.GetPayments()))
+	for _, payment := range resp.GetPayments() {
+		payments = append(payments, gin.H{
+			"id":            payment.GetInvId(),
+			"plan":          payment.GetPlan(),
+			"name":          payment.GetName(),
+			"amount":        payment.GetAmount(),
+			"duration_days": payment.GetDurationDays(),
+			"paid_at":       payment.GetPaidAt(),
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"payments": payments})
+}
+
 func (a *PaymentAPI) CreatePayment(c *gin.Context) {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {

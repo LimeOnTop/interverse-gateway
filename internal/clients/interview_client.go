@@ -93,3 +93,7 @@ func (c *InterviewClient) GetSessionContent(ctx context.Context, interviewID, us
 	}
 	return c.client.GetSessionContent(ctx, req)
 }
+
+func (c *InterviewClient) GetTrainingStats(ctx context.Context, userID, subscriptionPlan string) (*pb.GetTrainingStatsResponse, error) {
+	return c.client.GetTrainingStats(ctx, &pb.GetTrainingStatsRequest{UserId: userID, SubscriptionPlan: subscriptionPlan})
+}

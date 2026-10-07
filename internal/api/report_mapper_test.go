@@ -30,8 +30,17 @@ func TestMapReportHidesWeakPointsForBasic(t *testing.T) {
 	if got := mapped["weak_points_count"]; got != 2 {
 		t.Fatalf("weak_points_count = %v, want 2", got)
 	}
-	if len(mapped["weak_points"].([]reportWeakPoint)) != 0 || len(mapped["answer_reviews"].([]reportAnswerReview)) != 0 {
-		t.Fatal("basic report must not expose weak points or answer reviews")
+	if len(mapped["weak_points"].([]reportWeakPoint)) != 0 {
+		t.Fatal("basic report must not expose weak points")
+	}
+	reviews := mapped["answer_reviews"].([]reportAnswerReview)
+	if len(reviews) != 3 {
+		t.Fatalf("basic report must keep the answered questions, got %d", len(reviews))
+	}
+	for _, review := range reviews {
+		if review.IsCorrect != nil || review.CorrectAnswer != "" || review.CorrectIndex != nil || len(review.Options) != 0 {
+			t.Fatalf("basic review reveals the verdict: %+v", review)
+		}
 	}
 	if mapped["weaknesses"] != "" || mapped["recommendations"] != "" || mapped["strengths"] != "" {
 		t.Fatal("basic report must not expose weaknesses, strengths or recommendations")

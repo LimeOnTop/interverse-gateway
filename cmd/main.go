@@ -56,6 +56,7 @@ func main() {
 	adminAPI := api.NewAdminAPI(questionClient, authClient, paymentClient)
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
 	paymentAPI := api.NewPaymentAPI(paymentClient)
+	dashboardAPI := api.NewDashboardAPI(interviewClient, reportClient, authClient)
 	googleOAuthAPI := api.NewGoogleOAuthAPI(
 		authClient,
 		cfg.GoogleClientID,
@@ -184,7 +185,10 @@ func main() {
 			payments.GET("/robokassa/result", paymentAPI.RobokassaResult)
 			payments.GET("/offers", paymentAPI.GetOffers)
 			payments.POST("/", requireAuth, paymentAPI.CreatePayment)
+			payments.GET("/history", requireAuth, paymentAPI.History)
 		}
+
+		v1.GET("/dashboard/summary", requireAuth, dashboardAPI.Summary)
 	}
 
 	log.Printf("API Gateway starting on port %s", cfg.Port)

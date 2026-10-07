@@ -25,6 +25,9 @@ type reportMetadata struct {
 	InterviewScheduledAt    string               `json:"interview_scheduled_at"`
 	AnswerReviews           []reportAnswerReview `json:"answer_reviews"`
 	WeakPoints              []reportWeakPoint    `json:"weak_points"`
+	AnalysisMode            string               `json:"analysis_mode"`
+	MCQCorrect              int                  `json:"mcq_correct"`
+	MCQTotal                int                  `json:"mcq_total"`
 }
 
 type reportWeakPoint struct {
@@ -103,7 +106,8 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		title = "Тренировка"
 	}
 
-	aiAnalyzed := !isFallbackReport(comments)
+	// A Basic (no LLM) report can be re-analyzed once the user has Pro.
+	aiAnalyzed := !isFallbackReport(comments) && !(full && metadata.AnalysisMode == "basic")
 
 	algorithmPassed := resolveSectionPassed(metadata.AlgorithmPassed, algorithmScore)
 	architecturePassed := resolveSectionPassed(metadata.ArchitecturePassed, metadata.ArchitectureScore)
@@ -124,13 +128,31 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		weakPoints = weakPointsFromReviews(answerReviews, codingPassed)
 	}
 
+	questionTotal, taskTotal, technologies := reviewTotals(answerReviews)
+	theoryTotal := metadata.MCQTotal
+	if theoryTotal == 0 {
+		theoryTotal = questionTotal
+	}
+	theoryCorrect := metadata.MCQCorrect
+	if metadata.MCQTotal == 0 {
+		theoryCorrect = 0
+		for _, review := range answerReviews {
+			if review.ItemType != "task" && review.IsCorrect != nil && *review.IsCorrect {
+				theoryCorrect++
+			}
+		}
+	}
+	headline := reportHeadline(algorithmScore, codingScore, theoryTotal > 0, taskTotal > 0)
+	groups := focusGroups(weakPoints)
+	focusCount := len(groups)
+
 	weaknesses := report["weaknesses"]
 	strengths := report["strengths"]
 	recommendations := report["recommendations"]
 	if !full {
 		// Comments, strengths and recommendations name the weak topics, so
 		// Basic gets only the topic-free public summary (empty for old reports).
-		answerReviews = []reportAnswerReview{}
+		answerReviews = answeredOnly(answerReviews)
 		weaknesses = ""
 		strengths = ""
 		recommendations = ""
@@ -139,6 +161,7 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 	visibleWeakPoints := weakPoints
 	if !full {
 		visibleWeakPoints = []reportWeakPoint{}
+		groups = []reportFocusGroup{}
 	}
 
 	return map[string]any{
@@ -164,6 +187,13 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		"weak_points":         visibleWeakPoints,
 		"weak_points_count":   len(weakPoints),
 		"locked":              !full,
+		"headline":            headline,
+		"theory_correct":      theoryCorrect,
+		"theory_total":        theoryTotal,
+		"task_total":          taskTotal,
+		"technologies":        technologies,
+		"focus":               groups,
+		"focus_count":         focusCount,
 		"interview": map[string]any{
 			"id":             report["interview_id"],
 			"title":          title,
@@ -290,4 +320,22 @@ func reviewTopic(review reportAnswerReview) string {
 		topic = strings.TrimSpace(review.Technology + " " + topic)
 	}
 	return topic
+}
+
+// answeredOnly keeps the questions and the user's own answers for Basic: no
+// correct answers, options or verdicts that would reveal the weak points.
+func answeredOnly(reviews []reportAnswerReview) []reportAnswerReview {
+	out := make([]reportAnswerReview, 0, len(reviews))
+	for _, review := range reviews {
+		out = append(out, reportAnswerReview{
+			StepID:     review.StepID,
+			ItemType:   review.ItemType,
+			SortOrder:  review.SortOrder,
+			Label:      review.Label,
+			Prompt:     review.Prompt,
+			Technology: review.Technology,
+			UserAnswer: review.UserAnswer,
+		})
+	}
+	return out
 }
