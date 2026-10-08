@@ -31,6 +31,7 @@ func main() {
 	questionClient := clients.NewQuestionClient(cfg.QuestionServiceURL)
 	vacancyClient := clients.NewVacancyClient(cfg.VacancyServiceURL)
 	paymentClient := clients.NewPaymentClient(cfg.PaymentServiceURL)
+	supportClient := clients.NewSupportClient(cfg.ProfileServiceURL)
 
 	jwtValidator := authjwt.NewValidator(cfg.JWTSecret)
 	accessRedis := redis.NewClient(&redis.Options{
@@ -56,6 +57,8 @@ func main() {
 	adminAPI := api.NewAdminAPI(questionClient, authClient, paymentClient)
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
 	paymentAPI := api.NewPaymentAPI(paymentClient)
+	supportAPI := api.NewSupportAPI(supportClient)
+	adminSupportAPI := api.NewAdminSupportAPI(supportClient)
 	dashboardAPI := api.NewDashboardAPI(interviewClient, reportClient, authClient)
 	googleOAuthAPI := api.NewGoogleOAuthAPI(
 		authClient,
@@ -170,6 +173,22 @@ func main() {
 			admin.POST("/moderation/questions/:id/approve", adminAPI.ApproveModerationQuestion)
 			admin.POST("/moderation/questions/:id/reject", adminAPI.RejectModerationQuestion)
 			admin.GET("/grafana-auth", adminAPI.GrafanaAuth)
+			admin.GET("/support/tickets", adminSupportAPI.ListTickets)
+			admin.GET("/support/tickets/:id", adminSupportAPI.GetTicket)
+			admin.GET("/support/tickets/:id/messages", adminSupportAPI.ListMessages)
+			admin.POST("/support/tickets/:id/messages", adminSupportAPI.AddMessage)
+			admin.POST("/support/tickets/:id/close", adminSupportAPI.CloseTicket)
+		}
+
+		support := v1.Group("/support")
+		support.Use(requireAuth)
+		{
+			support.POST("/tickets", supportAPI.CreateTicket)
+			support.GET("/tickets", supportAPI.ListTickets)
+			support.GET("/tickets/:id", supportAPI.GetTicket)
+			support.GET("/tickets/:id/messages", supportAPI.ListMessages)
+			support.POST("/tickets/:id/messages", supportAPI.AddMessage)
+			support.POST("/tickets/:id/close", supportAPI.CloseTicket)
 		}
 
 		vacancies := v1.Group("/vacancies")
