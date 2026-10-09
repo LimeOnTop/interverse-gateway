@@ -1,21 +1,21 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
 	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type ReportAPI struct {
-	reportClient *clients.ReportClient
-	authClient   *clients.AuthClient
+	reportClient usecase.ReportGateway
+	authClient   usecase.AuthGateway
 }
 
-func NewReportAPI(reportClient *clients.ReportClient, authClient *clients.AuthClient) *ReportAPI {
+func NewReportAPI(reportClient usecase.ReportGateway, authClient usecase.AuthGateway) *ReportAPI {
 	return &ReportAPI{
 		reportClient: reportClient,
 		authClient:   authClient,

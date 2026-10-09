@@ -8,23 +8,22 @@ import (
 
 	authpb "github.com/LimeOnTop/interverse-contracts/auth/gen"
 	paymentpb "github.com/LimeOnTop/interverse-contracts/payment/gen"
-
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type AdminAPI struct {
-	questionClient *clients.QuestionClient
-	authClient     *clients.AuthClient
-	paymentClient  *clients.PaymentClient
+	questionClient usecase.QuestionGateway
+	authClient     usecase.AuthGateway
+	paymentClient  usecase.PaymentGateway
 }
 
 func NewAdminAPI(
-	questionClient *clients.QuestionClient,
-	authClient *clients.AuthClient,
-	paymentClient *clients.PaymentClient,
+	questionClient usecase.QuestionGateway,
+	authClient usecase.AuthGateway,
+	paymentClient usecase.PaymentGateway,
 ) *AdminAPI {
 	return &AdminAPI{
 		questionClient: questionClient,

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/payment/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type PaymentClient struct {
@@ -50,3 +51,5 @@ func (c *PaymentClient) GetPaymentStats(ctx context.Context, periods *pb.PeriodB
 func (c *PaymentClient) ListUserPayments(ctx context.Context, userID string) (*pb.ListUserPaymentsResponse, error) {
 	return c.client.ListUserPayments(ctx, &pb.ListUserPaymentsRequest{UserId: userID})
 }
+
+var _ usecase.PaymentGateway = (*PaymentClient)(nil)

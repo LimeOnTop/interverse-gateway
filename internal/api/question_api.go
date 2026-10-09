@@ -1,12 +1,12 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
 	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,10 +17,10 @@ type questionOptionRequest struct {
 }
 
 type QuestionAPI struct {
-	questionClient *clients.QuestionClient
+	questionClient usecase.QuestionGateway
 }
 
-func NewQuestionAPI(questionClient *clients.QuestionClient) *QuestionAPI {
+func NewQuestionAPI(questionClient usecase.QuestionGateway) *QuestionAPI {
 	return &QuestionAPI{
 		questionClient: questionClient,
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/user/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 // SupportClient talks to the support tickets API hosted by user-service.
@@ -51,3 +52,5 @@ func (c *SupportClient) AddMessage(ctx context.Context, ticketID int64, userID, 
 func (c *SupportClient) CloseTicket(ctx context.Context, ticketID int64, userID, closedBy string) (*pb.TicketResponse, error) {
 	return c.client.CloseTicket(ctx, &pb.CloseTicketRequest{TicketId: ticketID, UserId: userID, ClosedBy: closedBy})
 }
+
+var _ usecase.SupportGateway = (*SupportClient)(nil)

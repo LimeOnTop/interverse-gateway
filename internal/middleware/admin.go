@@ -10,6 +10,7 @@ func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := CurrentUser(c)
 		if !ok {
+			c.Abort()
 			return
 		}
 		if user.Role != "admin" {

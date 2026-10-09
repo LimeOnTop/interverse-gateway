@@ -5,18 +5,18 @@ import (
 	"net/http"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type DashboardAPI struct {
-	interviewClient *clients.InterviewClient
-	reportClient    *clients.ReportClient
-	authClient      *clients.AuthClient
+	interviewClient usecase.InterviewGateway
+	reportClient    usecase.ReportGateway
+	authClient      usecase.AuthGateway
 }
 
-func NewDashboardAPI(interviewClient *clients.InterviewClient, reportClient *clients.ReportClient, authClient *clients.AuthClient) *DashboardAPI {
+func NewDashboardAPI(interviewClient usecase.InterviewGateway, reportClient usecase.ReportGateway, authClient usecase.AuthGateway) *DashboardAPI {
 	return &DashboardAPI{interviewClient: interviewClient, reportClient: reportClient, authClient: authClient}
 }
 

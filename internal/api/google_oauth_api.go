@@ -11,21 +11,21 @@ import (
 	"time"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
 type GoogleOAuthAPI struct {
-	authClient  *clients.AuthClient
+	authClient  usecase.AuthGateway
 	oauthConfig *oauth2.Config
 	frontendURL string
 	enabled     bool
 }
 
 func NewGoogleOAuthAPI(
-	authClient *clients.AuthClient,
+	authClient usecase.AuthGateway,
 	clientID, clientSecret, redirectURL, frontendURL string,
 ) *GoogleOAuthAPI {
 	enabled := strings.TrimSpace(clientID) != "" &&

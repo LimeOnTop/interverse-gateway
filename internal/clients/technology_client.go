@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/technology/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type TechnologyClient struct {
@@ -71,3 +72,5 @@ func (c *TechnologyClient) SearchTechnologies(ctx context.Context, query string,
 	}
 	return c.client.SearchTechnologies(ctx, req)
 }
+
+var _ usecase.TechnologyGateway = (*TechnologyClient)(nil)

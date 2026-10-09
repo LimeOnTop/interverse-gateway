@@ -7,8 +7,8 @@ import (
 
 	pb "github.com/LimeOnTop/interverse-contracts/user/gen"
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,15 +23,15 @@ const (
 // SupportAPI serves both the user's own tickets and the admin inbox.
 // The admin flag decides whose tickets are visible and who is the message author.
 type SupportAPI struct {
-	supportClient *clients.SupportClient
+	supportClient usecase.SupportGateway
 	admin         bool
 }
 
-func NewSupportAPI(supportClient *clients.SupportClient) *SupportAPI {
+func NewSupportAPI(supportClient usecase.SupportGateway) *SupportAPI {
 	return &SupportAPI{supportClient: supportClient}
 }
 
-func NewAdminSupportAPI(supportClient *clients.SupportClient) *SupportAPI {
+func NewAdminSupportAPI(supportClient usecase.SupportGateway) *SupportAPI {
 	return &SupportAPI{supportClient: supportClient, admin: true}
 }
 

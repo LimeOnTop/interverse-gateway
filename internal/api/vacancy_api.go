@@ -6,16 +6,16 @@ import (
 	"strings"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type VacancyAPI struct {
-	vacancyClient *clients.VacancyClient
+	vacancyClient usecase.VacancyGateway
 }
 
-func NewVacancyAPI(vacancyClient *clients.VacancyClient) *VacancyAPI {
+func NewVacancyAPI(vacancyClient usecase.VacancyGateway) *VacancyAPI {
 	return &VacancyAPI{vacancyClient: vacancyClient}
 }
 

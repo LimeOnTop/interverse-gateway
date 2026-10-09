@@ -1,19 +1,19 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type ProfileAPI struct {
-	profileClient *clients.ProfileClient
+	profileClient usecase.ProfileGateway
 }
 
-func NewProfileAPI(profileClient *clients.ProfileClient) *ProfileAPI {
+func NewProfileAPI(profileClient usecase.ProfileGateway) *ProfileAPI {
 	return &ProfileAPI{profileClient: profileClient}
 }
 

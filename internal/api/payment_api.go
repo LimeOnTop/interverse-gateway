@@ -7,16 +7,16 @@ import (
 	"strings"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type PaymentAPI struct {
-	paymentClient *clients.PaymentClient
+	paymentClient usecase.PaymentGateway
 }
 
-func NewPaymentAPI(paymentClient *clients.PaymentClient) *PaymentAPI {
+func NewPaymentAPI(paymentClient usecase.PaymentGateway) *PaymentAPI {
 	return &PaymentAPI{paymentClient: paymentClient}
 }
 

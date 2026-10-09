@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/auth/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type AuthClient struct {
@@ -94,4 +95,10 @@ func (c *AuthClient) VerifyEmail(ctx context.Context, email, code, password stri
 
 func (c *AuthClient) GetRegistrationStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetRegistrationStatsResponse, error) {
 	return c.client.GetRegistrationStats(ctx, &pb.GetRegistrationStatsRequest{Periods: periods})
+}
+
+var _ usecase.AuthGateway = (*AuthClient)(nil)
+
+func (c *AuthClient) ListUsers(ctx context.Context, request *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+	return c.client.ListUsers(ctx, request)
 }

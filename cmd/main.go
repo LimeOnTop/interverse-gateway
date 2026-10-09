@@ -167,6 +167,7 @@ func main() {
 		admin.Use(requireAuth, middleware.AdminRequired())
 		{
 			admin.GET("/stats", adminAPI.Stats)
+			admin.GET("/users", adminAPI.ListUsers)
 			admin.GET("/metrics", adminAPI.Metrics)
 			admin.GET("/questions", adminAPI.ListQuestions)
 			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)

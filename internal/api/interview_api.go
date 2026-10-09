@@ -2,23 +2,23 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 	"time"
 
 	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type InterviewAPI struct {
-	interviewClient *clients.InterviewClient
-	authClient      *clients.AuthClient
+	interviewClient usecase.InterviewGateway
+	authClient      usecase.AuthGateway
 }
 
-func NewInterviewAPI(interviewClient *clients.InterviewClient, authClient *clients.AuthClient) *InterviewAPI {
+func NewInterviewAPI(interviewClient usecase.InterviewGateway, authClient usecase.AuthGateway) *InterviewAPI {
 	return &InterviewAPI{
 		interviewClient: interviewClient,
 		authClient:      authClient,

@@ -1,18 +1,18 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type TechnologyAPI struct {
-	technologyClient *clients.TechnologyClient
+	technologyClient usecase.TechnologyGateway
 }
 
-func NewTechnologyAPI(technologyClient *clients.TechnologyClient) *TechnologyAPI {
+func NewTechnologyAPI(technologyClient usecase.TechnologyGateway) *TechnologyAPI {
 	return &TechnologyAPI{
 		technologyClient: technologyClient,
 	}

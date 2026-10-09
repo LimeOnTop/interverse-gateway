@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb "github.com/LimeOnTop/interverse-contracts/vacancy/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type VacancyClient struct {
@@ -47,3 +48,5 @@ func (c *VacancyClient) SearchVacancies(
 		Sources: sources,
 	})
 }
+
+var _ usecase.VacancyGateway = (*VacancyClient)(nil)

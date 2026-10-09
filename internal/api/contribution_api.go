@@ -1,20 +1,20 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"strings"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type ContributionAPI struct {
-	questionClient *clients.QuestionClient
+	questionClient usecase.QuestionGateway
 }
 
-func NewContributionAPI(questionClient *clients.QuestionClient) *ContributionAPI {
+func NewContributionAPI(questionClient usecase.QuestionGateway) *ContributionAPI {
 	return &ContributionAPI{questionClient: questionClient}
 }
 

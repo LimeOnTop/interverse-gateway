@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb "github.com/LimeOnTop/interverse-contracts/report/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -89,3 +90,5 @@ func (c *ReportClient) DeleteReport(ctx context.Context, reportID string) (*pb.R
 	}
 	return c.client.DeleteReport(ctx, req)
 }
+
+var _ usecase.ReportGateway = (*ReportClient)(nil)

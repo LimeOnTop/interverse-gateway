@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/interview/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type InterviewClient struct {
@@ -97,3 +98,5 @@ func (c *InterviewClient) GetSessionContent(ctx context.Context, interviewID, us
 func (c *InterviewClient) GetTrainingStats(ctx context.Context, userID, subscriptionPlan string) (*pb.GetTrainingStatsResponse, error) {
 	return c.client.GetTrainingStats(ctx, &pb.GetTrainingStatsRequest{UserId: userID, SubscriptionPlan: subscriptionPlan})
 }
+
+var _ usecase.InterviewGateway = (*InterviewClient)(nil)

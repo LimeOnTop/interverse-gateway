@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 
 // subscriptionPlan resolves the user's plan for quotas and gated content.
 // Only an active subscription counts as Pro; any lookup failure means Basic.
-func subscriptionPlan(ctx context.Context, authClient *clients.AuthClient, userID string) string {
+func subscriptionPlan(ctx context.Context, authClient usecase.AuthGateway, userID string) string {
 	if authClient == nil {
 		return planFree
 	}

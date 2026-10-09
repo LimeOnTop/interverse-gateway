@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/question/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type QuestionClient struct {
@@ -90,3 +91,5 @@ func (c *QuestionClient) GetQuestionsByTechnology(ctx context.Context, technolog
 	}
 	return c.client.GetQuestionsByTechnology(ctx, req)
 }
+
+var _ usecase.QuestionGateway = (*QuestionClient)(nil)

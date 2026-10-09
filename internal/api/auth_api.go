@@ -1,22 +1,22 @@
 package api
 
 import (
-	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"net/http"
 	"net/mail"
 	"strings"
 
-	"github.com/LimeOnTop/interverse-gateway/internal/clients"
+	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthAPI struct {
-	authClient    *clients.AuthClient
+	authClient    usecase.AuthGateway
 	adminUsername string
 }
 
-func NewAuthAPI(authClient *clients.AuthClient, adminUsername string) *AuthAPI {
+func NewAuthAPI(authClient usecase.AuthGateway, adminUsername string) *AuthAPI {
 	return &AuthAPI{
 		authClient:    authClient,
 		adminUsername: strings.TrimSpace(adminUsername),

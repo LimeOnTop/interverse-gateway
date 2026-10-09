@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/LimeOnTop/interverse-contracts/user/gen"
+	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
 )
 
 type ProfileClient struct {
@@ -36,3 +37,5 @@ func (c *ProfileClient) UpdateProfile(
 	}
 	return c.client.UpdateProfile(ctx, req)
 }
+
+var _ usecase.ProfileGateway = (*ProfileClient)(nil)
