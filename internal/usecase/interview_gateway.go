@@ -8,7 +8,7 @@ import (
 
 // InterviewGateway is the backend port consumed by HTTP controllers.
 type InterviewGateway interface {
-	CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization, subscriptionPlan string, technologies []string) (*pb.CreateInterviewResponse, error)
+	CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization, subscriptionPlan string, technologies []string, taskMode ...string) (*pb.CreateInterviewResponse, error)
 	GetInterviews(ctx context.Context, userID, status string, page, limit int32) (*pb.GetInterviewsResponse, error)
 	GetScheduledInterviews(ctx context.Context, userID, date string) (*pb.GetScheduledInterviewsResponse, error)
 	GetInterview(ctx context.Context, interviewID string) (*pb.GetInterviewResponse, error)

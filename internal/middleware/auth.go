@@ -63,6 +63,11 @@ func AuthRequired(validator *authjwt.Validator, blacklist *authjwt.AccessBlackli
 			return
 		}
 
+		version, err := blacklist.CurrentVersion(c.Request.Context(), claims.UserID)
+		if err != nil || version != claims.SessionVersion {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session revoked"})
+			return
+		}
 		c.Set(userContextKey, User{
 			ID:    claims.UserID,
 			Email: claims.Email,

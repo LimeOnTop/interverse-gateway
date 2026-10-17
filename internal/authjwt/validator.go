@@ -11,18 +11,20 @@ const TokenTypeAccess = "access"
 
 // Claims mirrors interverse-auth JWT payload.
 type Claims struct {
-	UserID    int64  `json:"user_id"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	TokenType string `json:"token_type"`
+	SessionVersion int64  `json:"session_version"`
+	UserID         int64  `json:"user_id"`
+	Email          string `json:"email"`
+	Role           string `json:"role"`
+	TokenType      string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
 type AccessClaims struct {
-	UserID string
-	Email  string
-	Role   string
-	JTI    string
+	SessionVersion int64
+	UserID         string
+	Email          string
+	Role           string
+	JTI            string
 }
 
 type Validator struct {
@@ -39,7 +41,7 @@ func (v *Validator) ParseAccess(token string) (AccessClaims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return v.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired(), jwt.WithIssuedAt())
 	if err != nil {
 		return AccessClaims{}, fmt.Errorf("parse token: %w", err)
 	}
@@ -56,9 +58,10 @@ func (v *Validator) ParseAccess(token string) (AccessClaims, error) {
 	}
 
 	return AccessClaims{
-		UserID: strconv.FormatInt(claims.UserID, 10),
-		Email:  claims.Email,
-		Role:   claims.Role,
-		JTI:    claims.ID,
+		UserID:         strconv.FormatInt(claims.UserID, 10),
+		SessionVersion: claims.SessionVersion,
+		Email:          claims.Email,
+		Role:           claims.Role,
+		JTI:            claims.ID,
 	}, nil
 }

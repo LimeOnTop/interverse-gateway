@@ -41,13 +41,19 @@ func (c *AuthClient) GetUser(ctx context.Context, id string) (*pb.GetUserRespons
 	return c.client.GetUser(ctx, req)
 }
 
-func (c *AuthClient) UpdateUser(ctx context.Context, id, name, email, password, role string) (*pb.UpdateUserResponse, error) {
+func (c *AuthClient) UpdateUser(ctx context.Context, id, name, email, password, role string, security ...string) (*pb.UpdateUserResponse, error) {
 	req := &pb.UpdateUserRequest{
 		Id:       id,
 		Name:     name,
 		Email:    email,
 		Password: password,
 		Role:     role,
+	}
+	if len(security) > 0 {
+		req.CurrentPassword = security[0]
+	}
+	if len(security) > 1 {
+		req.EmailCode = security[1]
 	}
 	return c.client.UpdateUser(ctx, req)
 }
@@ -101,4 +107,8 @@ var _ usecase.AuthGateway = (*AuthClient)(nil)
 
 func (c *AuthClient) ListUsers(ctx context.Context, request *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
 	return c.client.ListUsers(ctx, request)
+}
+
+func (c *AuthClient) BeginEmailChange(ctx context.Context, id, email, currentPassword string) (*pb.SendEmailVerificationResponse, error) {
+	return c.client.BeginEmailChange(ctx, &pb.BeginEmailChangeRequest{Id: id, Email: email, CurrentPassword: currentPassword})
 }

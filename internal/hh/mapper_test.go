@@ -49,8 +49,8 @@ func TestExtractResumeID(t *testing.T) {
 	cases := map[string]string{
 		"https://hh.ru/resume/abc123def":         "abc123def",
 		"https://hh.ru/resume/abc123def?query=1": "abc123def",
-		"abc123def": "abc123def",
-		"":          "",
+		"abc123def":                              "abc123def",
+		"":                                       "",
 	}
 
 	for input, want := range cases {

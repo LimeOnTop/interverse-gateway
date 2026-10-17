@@ -49,6 +49,7 @@ func (a *VacancyAPI) GetVacancies(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"profile_ready": resp.ProfileReady,
+		"loading":       resp.Loading,
 		"query_text":    resp.QueryText,
 		"items":         resp.Items,
 		"page":          resp.Page,

@@ -77,3 +77,14 @@ func (a *DashboardAPI) Summary(c *gin.Context) {
 		"last_report": lastReport,
 	})
 }
+
+// PublicTrainingLimits exposes only the enforced allowance, never user data.
+func (a *DashboardAPI) PublicTrainingLimits(c *gin.Context) {
+	stats, err := a.interviewClient.GetTrainingStats(c.Request.Context(), "0", "free")
+	if err != nil || stats == nil || (stats.GetResponse() != nil && !stats.GetResponse().GetSuccess()) {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Training limits unavailable"})
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, gin.H{"free_trainings_total": stats.GetQuotaLimit()})
+}

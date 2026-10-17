@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
+	"os"
 
 	"github.com/LimeOnTop/interverse-gateway/cmd/config"
 	"github.com/LimeOnTop/interverse-gateway/internal/api"
@@ -50,12 +52,16 @@ func main() {
 	})
 	hhImportAPI := api.NewHHImportAPI(hhClient)
 	interviewAPI := api.NewInterviewAPI(interviewClient, authClient)
+	preparationAPI := api.NewPreparationAPI(interviewClient, authClient)
+	trainingIntentAPI := api.NewTrainingIntentAPI(accessRedis, interviewClient, authClient)
 	reportAPI := api.NewReportAPI(reportClient, authClient)
+	reportAPI.SetReviewClient(interviewClient)
 	technologyAPI := api.NewTechnologyAPI(technologyClient)
 	questionAPI := api.NewQuestionAPI(questionClient)
 	contributionAPI := api.NewContributionAPI(questionClient)
 	adminAPI := api.NewAdminAPI(questionClient, authClient, paymentClient)
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
+	publicJobsAPI := api.NewPublicJobsAPI(accessRedis, vacancyClient, "./public-seo")
 	paymentAPI := api.NewPaymentAPI(paymentClient)
 	supportAPI := api.NewSupportAPI(supportClient)
 	adminSupportAPI := api.NewAdminSupportAPI(supportClient)
@@ -66,9 +72,15 @@ func main() {
 		cfg.GoogleClientSecret,
 		cfg.GoogleRedirectURL,
 		cfg.FrontendURL,
+		accessRedis,
 	)
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
+	if err := router.SetTrustedProxies([]string{"127.0.0.1", "::1", "172.16.0.0/12", "10.0.0.0/8"}); err != nil {
+		log.Fatal(err)
+	}
+	authLimit := middleware.AuthRateLimit(accessRedis)
 	router.Use(middleware.CORS())
 	router.Use(middleware.Metrics())
 	router.Use(middleware.Logger())
@@ -82,18 +94,24 @@ func main() {
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := router.Group("/api/v1")
+	v1.GET("/public/training-limits", dashboardAPI.PublicTrainingLimits)
+	v1.GET("/public/jobs/:track", publicJobsAPI.Get)
+	v1.GET("/public/job-pages/:track", publicJobsAPI.Page)
+	v1.POST("/training-intents", trainingIntentAPI.Save)
+	v1.POST("/training-intents/:id/resume", requireAuth, trainingIntentAPI.Resume)
 	{
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", authAPI.Register)
-			auth.POST("/login", authAPI.Login)
+			auth.POST("/register", authLimit, authAPI.Register)
+			auth.POST("/login", authLimit, authAPI.Login)
 			auth.POST("/refresh", authAPI.RefreshToken)
-			auth.POST("/verify-email", authAPI.VerifyEmail)
+			auth.POST("/verify-email", authLimit, authAPI.VerifyEmail)
 			auth.POST("/verify-email/resend", authAPI.ResendEmailVerification)
-			auth.POST("/logout", requireAuth, authAPI.Logout)
+			auth.POST("/logout", authAPI.Logout)
 			auth.GET("/me", requireAuth, authAPI.GetMe)
 			auth.GET("/google/login", googleOAuthAPI.Login)
 			auth.GET("/google/callback", googleOAuthAPI.Callback)
+			auth.POST("/google/exchange", googleOAuthAPI.Exchange)
 		}
 
 		users := v1.Group("/users")
@@ -101,6 +119,7 @@ func main() {
 		{
 			users.GET("/:id", authAPI.GetUser)
 			users.PUT("/:id", authAPI.UpdateUser)
+			users.POST("/:id/email-change", authLimit, authAPI.BeginEmailChange)
 			users.DELETE("/:id", authAPI.DeleteUser)
 			users.GET("/:id/profile", profileAPI.GetProfile)
 			users.PUT("/:id/profile", profileAPI.UpdateProfile)
@@ -127,7 +146,8 @@ func main() {
 		{
 			reports.POST("/generate", reportAPI.GenerateReport)
 			reports.POST("/:id/analyze", reportAPI.AnalyzeReport)
-			reports.POST("/", reportAPI.CreateReport)
+			reports.POST("/:id/practice", reportAPI.StartReviewTraining)
+			reports.POST("/", middleware.AdminRequired(), reportAPI.CreateReport)
 			reports.GET("/", reportAPI.GetReports)
 			reports.GET("/:id", reportAPI.GetReport)
 			reports.PUT("/:id", reportAPI.UpdateReport)
@@ -139,9 +159,9 @@ func main() {
 		{
 			technologies.GET("/", technologyAPI.GetTechnologies)
 			technologies.GET("/:id", technologyAPI.GetTechnology)
-			technologies.POST("/", technologyAPI.CreateTechnology)
-			technologies.PUT("/:id", technologyAPI.UpdateTechnology)
-			technologies.DELETE("/:id", technologyAPI.DeleteTechnology)
+			technologies.POST("/", middleware.AdminRequired(), technologyAPI.CreateTechnology)
+			technologies.PUT("/:id", middleware.AdminRequired(), technologyAPI.UpdateTechnology)
+			technologies.DELETE("/:id", middleware.AdminRequired(), technologyAPI.DeleteTechnology)
 			technologies.GET("/search", technologyAPI.SearchTechnologies)
 		}
 
@@ -206,11 +226,18 @@ func main() {
 			payments.GET("/offers", paymentAPI.GetOffers)
 			payments.POST("/", requireAuth, paymentAPI.CreatePayment)
 			payments.GET("/history", requireAuth, paymentAPI.History)
+			payments.GET("/renewal", requireAuth, paymentAPI.GetRenewal)
+			payments.PUT("/renewal", requireAuth, paymentAPI.SetRenewal)
 		}
 
+		v1.GET("/preparations", requireAuth, preparationAPI.List)
+		v1.POST("/preparations", requireAuth, preparationAPI.Create)
+		v1.POST("/preparations/:id/steps/:step/prepare", requireAuth, preparationAPI.Prepare)
 		v1.GET("/dashboard/summary", requireAuth, dashboardAPI.Summary)
 	}
 
 	log.Printf("API Gateway starting on port %s", cfg.Port)
-	router.Run(":" + cfg.Port)
+	if err := router.Run(net.JoinHostPort(os.Getenv("BIND_ADDRESS"), cfg.Port)); err != nil {
+		log.Fatal(err)
+	}
 }

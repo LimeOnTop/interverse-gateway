@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
@@ -35,8 +36,8 @@ func (a *ContributionAPI) SubmitQuestion(c *gin.Context) {
 	}
 
 	text := strings.TrimSpace(req.Text)
-	if len(text) < 10 {
-		apperr.Public(c, http.StatusBadRequest, "question text is too short")
+	if utf8.RuneCountInString(text) < 10 || utf8.RuneCountInString(text) > 10000 {
+		apperr.Public(c, http.StatusBadRequest, "Текст вопроса должен содержать от 10 до 10 000 символов")
 		return
 	}
 
@@ -47,7 +48,8 @@ func (a *ContributionAPI) SubmitQuestion(c *gin.Context) {
 
 	technology := strings.TrimSpace(req.Technology)
 	if technology == "" {
-		technology = "Общее"
+		apperr.Public(c, http.StatusBadRequest, "Выбери технологию")
+		return
 	}
 
 	resp, err := a.questionClient.CreateQuestion(
@@ -70,7 +72,7 @@ func (a *ContributionAPI) SubmitQuestion(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message":  "Спасибо! Вопрос отправлен на модерацию",
+		"message":  "Вопрос отправлен на модерацию. После одобрения начислим 30 дней Pro.",
 		"question": resp.Question,
 	})
 }

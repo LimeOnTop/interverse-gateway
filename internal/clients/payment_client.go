@@ -53,3 +53,10 @@ func (c *PaymentClient) ListUserPayments(ctx context.Context, userID string) (*p
 }
 
 var _ usecase.PaymentGateway = (*PaymentClient)(nil)
+
+func (c *PaymentClient) GetRenewal(ctx context.Context, id string) (*pb.RenewalResponse, error) {
+	return c.client.GetRenewal(ctx, &pb.RenewalRequest{UserId: id})
+}
+func (c *PaymentClient) SetRenewal(ctx context.Context, id string, enabled bool) (*pb.RenewalResponse, error) {
+	return c.client.SetRenewal(ctx, &pb.SetRenewalRequest{UserId: id, Enabled: enabled})
+}

@@ -30,3 +30,14 @@ func (b *AccessBlacklist) IsRevoked(ctx context.Context, jti string) (bool, erro
 	}
 	return n > 0, nil
 }
+
+func (b *AccessBlacklist) CurrentVersion(ctx context.Context, userID string) (int64, error) {
+	if b == nil || b.client == nil {
+		return 0, fmt.Errorf("session store unavailable")
+	}
+	v, err := b.client.Get(ctx, "auth:version:"+userID).Int64()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	return v, err
+}

@@ -93,3 +93,7 @@ func (c *QuestionClient) GetQuestionsByTechnology(ctx context.Context, technolog
 }
 
 var _ usecase.QuestionGateway = (*QuestionClient)(nil)
+
+func (c *QuestionClient) ApproveContribution(ctx context.Context, req *pb.ApproveContributionRequest) (*pb.ApproveContributionResponse, error) {
+	return c.client.ApproveContribution(ctx, req)
+}

@@ -289,10 +289,12 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 	}
 
 	var req struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
+		Name            string `json:"name"`
+		Email           string `json:"email"`
+		Password        string `json:"password"`
+		Role            string `json:"role"`
+		CurrentPassword string `json:"current_password"`
+		EmailCode       string `json:"email_code"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apperr.Bind(c, err)
@@ -303,7 +305,7 @@ func (a *AuthAPI) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	resp, err := a.authClient.UpdateUser(c.Request.Context(), userID, req.Name, req.Email, req.Password, req.Role)
+	resp, err := a.authClient.UpdateUser(c.Request.Context(), userID, req.Name, req.Email, req.Password, req.Role, req.CurrentPassword, req.EmailCode)
 	if err != nil {
 		apperr.Internal(c, err)
 		return
@@ -333,4 +335,34 @@ func (a *AuthAPI) DeleteUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthAPI) BeginEmailChange(c *gin.Context) {
+	user, id, ok := authorizeUserAccess(c)
+	if !ok {
+		return
+	}
+	if user.ID != id {
+		apperr.Public(c, http.StatusForbidden, "access denied")
+		return
+	}
+	var req struct {
+		Email           string `json:"email" binding:"required,email"`
+		CurrentPassword string `json:"current_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apperr.Bind(c, err)
+		return
+	}
+	resp, err := a.authClient.BeginEmailChange(c.Request.Context(), id, req.Email, req.CurrentPassword)
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if !resp.GetResponse().GetSuccess() {
+		apperr.Upstream(c, http.StatusBadRequest, resp.GetResponse().GetError())
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, gin.H{"retry_after_seconds": resp.GetRetryAfterSeconds()})
 }

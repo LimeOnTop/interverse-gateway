@@ -19,4 +19,6 @@ type PaymentGateway interface {
 	) (*pb.ConfirmResultResponse, error)
 	GetPaymentStats(ctx context.Context, periods *pb.PeriodBoundaries) (*pb.GetPaymentStatsResponse, error)
 	ListUserPayments(ctx context.Context, userID string) (*pb.ListUserPaymentsResponse, error)
+	GetRenewal(ctx context.Context, userID string) (*pb.RenewalResponse, error)
+	SetRenewal(ctx context.Context, userID string, enabled bool) (*pb.RenewalResponse, error)
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"google.golang.org/grpc/metadata"
 	"log"
 	"net/http"
 	"strconv"
@@ -66,15 +67,20 @@ func (a *PaymentAPI) CreatePayment(c *gin.Context) {
 	}
 
 	var req struct {
-		Plan string `json:"plan"`
+		Plan             string `json:"plan"`
+		AutoRenewConsent bool   `json:"auto_renew_consent"`
+		ConsentVersion   string `json:"consent_version"`
 	}
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil || !req.AutoRenewConsent || req.ConsentVersion != "pro-2026-10-15" {
+		apperr.Public(c, http.StatusBadRequest, "Подтвердите условия оплаты и автоматического продления подписки")
+		return
+	}
 	plan := strings.TrimSpace(req.Plan)
 	if plan == "" {
 		plan = "paid_1m"
 	}
 
-	resp, err := a.paymentClient.CreatePayment(c.Request.Context(), user.ID, plan, user.Email)
+	resp, err := a.paymentClient.CreatePayment(metadata.AppendToOutgoingContext(c.Request.Context(), "x-pro-consent", req.ConsentVersion), user.ID, plan, user.Email)
 	if err != nil {
 		apperr.Internal(c, err)
 		return

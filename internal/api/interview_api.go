@@ -38,6 +38,7 @@ func parseTechStack(techStack string) []string {
 
 func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 	var req struct {
+		TaskMode       string `json:"task_mode"`
 		Title          string `json:"title"`
 		Description    string `json:"description"`
 		Specialization string `json:"specialization"`
@@ -60,7 +61,7 @@ func (a *InterviewAPI) CreateInterview(c *gin.Context) {
 	resp, err := a.interviewClient.CreateInterview(
 		c.Request.Context(),
 		user.ID, req.Title, req.Description, req.ScheduledAt,
-		req.Level, req.Specialization, subscriptionPlan, parseTechStack(req.TechStack),
+		req.Level, req.Specialization, subscriptionPlan, parseTechStack(req.TechStack), req.TaskMode,
 	)
 	if err != nil {
 		apperr.Internal(c, err)

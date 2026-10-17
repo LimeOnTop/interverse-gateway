@@ -158,6 +158,9 @@ func mapReportResponse(report map[string]any, full bool) map[string]any {
 		recommendations = ""
 		comments = metadata.SummaryPublic
 	}
+	if !isFallbackReport(comments) && (legacyReportVoice(comments) || metadata.AnalysisMode == "basic") {
+		comments = personalReportSummary(algorithmScore, codingScore, theoryTotal > 0, taskTotal > 0)
+	}
 	visibleWeakPoints := weakPoints
 	if !full {
 		visibleWeakPoints = []reportWeakPoint{}

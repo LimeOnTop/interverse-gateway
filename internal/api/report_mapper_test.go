@@ -45,7 +45,7 @@ func TestMapReportHidesWeakPointsForBasic(t *testing.T) {
 	if mapped["weaknesses"] != "" || mapped["recommendations"] != "" || mapped["strengths"] != "" {
 		t.Fatal("basic report must not expose weaknesses, strengths or recommendations")
 	}
-	if mapped["comments"] != "Уровень пока не достигнут." {
+	if mapped["comments"] != personalReportSummary(50, 0, true, true) {
 		t.Fatalf("basic comments = %v, want the public summary", mapped["comments"])
 	}
 	if mapped["overall_score"] != 11 {

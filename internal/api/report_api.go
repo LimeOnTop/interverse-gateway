@@ -11,6 +11,7 @@ import (
 )
 
 type ReportAPI struct {
+	reviewClient reviewTrainingGateway
 	reportClient usecase.ReportGateway
 	authClient   usecase.AuthGateway
 }

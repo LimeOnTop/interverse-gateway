@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"sync"
@@ -8,6 +9,7 @@ import (
 
 	authpb "github.com/LimeOnTop/interverse-contracts/auth/gen"
 	paymentpb "github.com/LimeOnTop/interverse-contracts/payment/gen"
+	questionpb "github.com/LimeOnTop/interverse-contracts/question/gen"
 	"github.com/LimeOnTop/interverse-gateway/internal/apperr"
 	"github.com/LimeOnTop/interverse-gateway/internal/middleware"
 	"github.com/LimeOnTop/interverse-gateway/internal/usecase"
@@ -226,104 +228,34 @@ func (a *AdminAPI) ListModerationQuestions(c *gin.Context) {
 }
 
 func (a *AdminAPI) ApproveModerationQuestion(c *gin.Context) {
-	questionID := c.Param("id")
-	if questionID == "" {
-		apperr.Public(c, http.StatusBadRequest, "question ID is required")
-		return
-	}
-
-	var req struct {
-		Difficulty string `json:"difficulty" binding:"required"`
-		Technology string `json:"technology"`
-		Category   string `json:"category"`
-		Text       string `json:"text"`
-		Answer     string `json:"answer"`
-	}
+	var req questionpb.ApproveContributionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apperr.Bind(c, err)
 		return
 	}
-
-	difficulty := strings.TrimSpace(req.Difficulty)
-	switch difficulty {
-	case "junior", "middle", "senior":
-	default:
-		apperr.Public(c, http.StatusBadRequest, "difficulty must be junior, middle or senior")
-		return
-	}
-
-	existing, err := a.questionClient.GetQuestion(c.Request.Context(), questionID)
-	if err != nil {
-		apperr.Internal(c, err)
-		return
-	}
-	if existing.Response != nil && !existing.Response.Success {
-		apperr.Upstream(c, http.StatusBadRequest, existing.Response.Error)
-		return
-	}
-	if existing.Question == nil {
-		apperr.Public(c, http.StatusNotFound, "question not found")
-		return
-	}
-	q := existing.Question
-	if q.Difficulty != "pending_moderation" && q.Category != "contribution" {
-		apperr.Public(c, http.StatusBadRequest, "question is not pending moderation")
-		return
-	}
-
-	text := strings.TrimSpace(req.Text)
-	if text == "" {
-		text = q.Text
-	}
-	answer := strings.TrimSpace(req.Answer)
-	if answer == "" {
-		answer = q.Answer
-	}
-	technology := strings.TrimSpace(req.Technology)
-	if technology == "" {
-		technology = q.Technology
-	}
-	category := strings.TrimSpace(req.Category)
-	if category == "" {
-		category = "question"
-	}
-
-	tags := append([]string{}, q.Tags...)
-	hasModerated := false
-	for _, tag := range tags {
-		if tag == "moderated" {
-			hasModerated = true
-			break
-		}
-	}
-	if !hasModerated {
-		tags = append(tags, "moderated")
-	}
-
-	resp, err := a.questionClient.UpdateQuestion(
-		c.Request.Context(),
-		questionID,
-		text,
-		category,
-		difficulty,
-		technology,
-		tags,
-		answer,
-		q.Options,
-	)
-	if err != nil {
-		apperr.Internal(c, err)
-		return
-	}
-	if resp.Response != nil && !resp.Response.Success {
-		apperr.Upstream(c, http.StatusBadRequest, resp.Response.Error)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Вопрос одобрен и добавлен в банк",
-		"question": resp.Question,
+	// Author and bonus duration never come from the HTTP request.
+	req.QuestionId = c.Param("id")
+	client, ok := a.questionClient.(interface {
+		ApproveContribution(context.Context, *questionpb.ApproveContributionRequest) (*questionpb.ApproveContributionResponse, error)
 	})
+	if !ok {
+		apperr.Public(c, http.StatusServiceUnavailable, "Одобрение временно недоступно")
+		return
+	}
+	resp, err := client.ApproveContribution(c.Request.Context(), &req)
+	if err != nil {
+		apperr.Internal(c, err)
+		return
+	}
+	if !resp.GetResponse().GetSuccess() {
+		apperr.Upstream(c, http.StatusBadRequest, resp.GetResponse().GetError())
+		return
+	}
+	message := "Вопрос добавлен в банк. Автору начислено 30 дней Pro."
+	if !resp.RewardGranted {
+		message = "Вопрос добавлен в банк. Начисление 30 дней Pro поставлено в очередь и повторится автоматически."
+	}
+	c.JSON(http.StatusOK, gin.H{"message": message, "question": resp.Question, "reward_granted": resp.RewardGranted, "reward_days": 30})
 }
 
 func (a *AdminAPI) RejectModerationQuestion(c *gin.Context) {

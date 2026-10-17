@@ -17,7 +17,7 @@ func NewInterviewClient(interviewServiceURL string) *InterviewClient {
 	}
 }
 
-func (c *InterviewClient) CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization, subscriptionPlan string, technologies []string) (*pb.CreateInterviewResponse, error) {
+func (c *InterviewClient) CreateInterview(ctx context.Context, userID, title, description, scheduledAt, level, specialization, subscriptionPlan string, technologies []string, taskMode ...string) (*pb.CreateInterviewResponse, error) {
 	req := &pb.CreateInterviewRequest{
 		UserId:           userID,
 		Title:            title,
@@ -27,6 +27,9 @@ func (c *InterviewClient) CreateInterview(ctx context.Context, userID, title, de
 		Level:            level,
 		Specialization:   specialization,
 		SubscriptionPlan: subscriptionPlan,
+	}
+	if len(taskMode) > 0 {
+		req.TaskMode = taskMode[0]
 	}
 	return c.client.CreateInterview(ctx, req)
 }
@@ -100,3 +103,11 @@ func (c *InterviewClient) GetTrainingStats(ctx context.Context, userID, subscrip
 }
 
 var _ usecase.InterviewGateway = (*InterviewClient)(nil)
+
+func (c *InterviewClient) VacancyPreparation(ctx context.Context, r *pb.VacancyPreparationRequest) (*pb.VacancyPreparationResponse, error) {
+	return c.client.VacancyPreparation(ctx, r)
+}
+
+func (c *InterviewClient) ReviewTraining(ctx context.Context, r *pb.ReviewTrainingRequest) (*pb.StartSessionResponse, error) {
+	return c.client.ReviewTraining(ctx, r)
+}
