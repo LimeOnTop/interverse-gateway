@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -44,6 +45,7 @@ func AuthRateLimit(cache *redis.Client) gin.HandlerFunc {
 		for i, key := range keys {
 			allowed, err := cache.Eval(c.Request.Context(), `local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[2]) end;if n>tonumber(ARGV[1]) then return 0 end;return 1`, []string{key}, limits[i], 900).Int()
 			if err != nil {
+				log.Printf("auth rate limiter Redis failure: %v", err)
 				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "authentication unavailable"})
 				return
 			}
