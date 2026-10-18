@@ -25,6 +25,8 @@ type PreparationAPI struct {
 func NewPreparationAPI(c PreparationGateway, a usecase.AuthGateway) *PreparationAPI {
 	return &PreparationAPI{c, a}
 }
+func (a *PreparationAPI) Update(c *gin.Context)  { a.execute(c, "update") }
+func (a *PreparationAPI) Archive(c *gin.Context) { a.execute(c, "archive") }
 func (a *PreparationAPI) List(c *gin.Context)    { a.execute(c, "list") }
 func (a *PreparationAPI) Create(c *gin.Context)  { a.execute(c, "create") }
 func (a *PreparationAPI) Prepare(c *gin.Context) { a.execute(c, "prepare_step") }
@@ -37,7 +39,7 @@ func (a *PreparationAPI) execute(c *gin.Context, action string) {
 	if action != "list" {
 		r.SubscriptionPlan = subscriptionPlan(c.Request.Context(), a.auth, u.ID)
 	}
-	if action == "create" {
+	if action == "create" || action == "update" || action == "archive" {
 		raw, e := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, 16000))
 		if e != nil || !json.Valid(raw) {
 			c.JSON(400, gin.H{"error": "Некорректные данные подготовки"})
@@ -75,7 +77,7 @@ func (a *PreparationAPI) execute(c *gin.Context, action string) {
 		case codes.PermissionDenied:
 			code = 403
 			message = status.Convert(e).Message()
-		case codes.FailedPrecondition:
+		case codes.FailedPrecondition, codes.Aborted:
 			code = 409
 			message = status.Convert(e).Message()
 		case codes.ResourceExhausted:

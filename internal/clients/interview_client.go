@@ -111,3 +111,7 @@ func (c *InterviewClient) VacancyPreparation(ctx context.Context, r *pb.VacancyP
 func (c *InterviewClient) ReviewTraining(ctx context.Context, r *pb.ReviewTrainingRequest) (*pb.StartSessionResponse, error) {
 	return c.client.ReviewTraining(ctx, r)
 }
+
+func (c *InterviewClient) PracticeState(ctx context.Context, r *pb.PracticeStateRequest) (*pb.PracticeStateResponse, error) {
+	return c.client.PracticeState(ctx, r)
+}

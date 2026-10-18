@@ -192,7 +192,7 @@ func toSessionAnswerInputs(answers sessionAnswersRequest) []*pb.SessionAnswerInp
 			TaskAnswer: answer.TaskAnswer,
 		}
 		if answer.SelectedOptionIndex != nil {
-			input.SelectedOptionIndex = *answer.SelectedOptionIndex
+			input.SelectedOptionIndex = answer.SelectedOptionIndex
 		}
 		result = append(result, input)
 	}

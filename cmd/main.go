@@ -53,6 +53,7 @@ func main() {
 	hhImportAPI := api.NewHHImportAPI(hhClient)
 	interviewAPI := api.NewInterviewAPI(interviewClient, authClient)
 	preparationAPI := api.NewPreparationAPI(interviewClient, authClient)
+	practiceAPI := api.NewPracticeAPI(interviewClient, authClient, reportClient)
 	trainingIntentAPI := api.NewTrainingIntentAPI(accessRedis, interviewClient, authClient)
 	reportAPI := api.NewReportAPI(reportClient, authClient)
 	reportAPI.SetReviewClient(interviewClient)
@@ -230,8 +231,19 @@ func main() {
 			payments.PUT("/renewal", requireAuth, paymentAPI.SetRenewal)
 		}
 
+		v1.POST("/practice-reminders/check", requireAuth, practiceAPI.Check)
+		v1.GET("/practice-reminders", requireAuth, practiceAPI.List)
+		v1.PUT("/practice-reminders", requireAuth, practiceAPI.Save)
+		v1.POST("/practice-reminders/restore", requireAuth, practiceAPI.Restore)
+		v1.POST("/practice-reminders/retry-email", requireAuth, practiceAPI.RetryMail)
+		v1.POST("/practice-reminders/dismiss", requireAuth, practiceAPI.Dismiss)
+		v1.POST("/practice-reminders/start", requireAuth, practiceAPI.Start)
+		v1.GET("/news", requireAuth, practiceAPI.News)
+		v1.POST("/news/read", requireAuth, practiceAPI.ReadNews)
 		v1.GET("/preparations", requireAuth, preparationAPI.List)
 		v1.POST("/preparations", requireAuth, preparationAPI.Create)
+		v1.PUT("/preparations/:id", requireAuth, preparationAPI.Update)
+		v1.POST("/preparations/:id/archive", requireAuth, preparationAPI.Archive)
 		v1.POST("/preparations/:id/steps/:step/prepare", requireAuth, preparationAPI.Prepare)
 		v1.GET("/dashboard/summary", requireAuth, dashboardAPI.Summary)
 	}
