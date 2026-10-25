@@ -231,6 +231,8 @@ func main() {
 			payments.PUT("/renewal", requireAuth, paymentAPI.SetRenewal)
 		}
 
+		v1.GET("/system-design/progress", requireAuth, practiceAPI.SystemDesignList)
+		v1.PUT("/system-design/progress", requireAuth, practiceAPI.SystemDesignSave)
 		v1.POST("/practice-reminders/check", requireAuth, practiceAPI.Check)
 		v1.GET("/practice-reminders", requireAuth, practiceAPI.List)
 		v1.PUT("/practice-reminders", requireAuth, practiceAPI.Save)

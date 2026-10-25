@@ -25,23 +25,29 @@ type PracticeAPI struct {
 func NewPracticeAPI(c practiceGateway, a usecase.AuthGateway, r usecase.ReportGateway) *PracticeAPI {
 	return &PracticeAPI{c, a, r}
 }
-func (a *PracticeAPI) Restore(c *gin.Context)   { a.run(c, "restore") }
-func (a *PracticeAPI) RetryMail(c *gin.Context) { a.run(c, "retry_email") }
-func (a *PracticeAPI) Check(c *gin.Context)     { a.run(c, "check") }
-func (a *PracticeAPI) List(c *gin.Context)      { a.run(c, "list") }
-func (a *PracticeAPI) Save(c *gin.Context)      { a.run(c, "save") }
-func (a *PracticeAPI) Dismiss(c *gin.Context)   { a.run(c, "dismiss") }
-func (a *PracticeAPI) Start(c *gin.Context)     { a.run(c, "start") }
-func (a *PracticeAPI) News(c *gin.Context)      { a.run(c, "news") }
-func (a *PracticeAPI) ReadNews(c *gin.Context)  { a.run(c, "read_news") }
+func (a *PracticeAPI) SystemDesignList(c *gin.Context) { a.run(c, "sd_list") }
+func (a *PracticeAPI) SystemDesignSave(c *gin.Context) { a.run(c, "sd_save") }
+func (a *PracticeAPI) Restore(c *gin.Context)          { a.run(c, "restore") }
+func (a *PracticeAPI) RetryMail(c *gin.Context)        { a.run(c, "retry_email") }
+func (a *PracticeAPI) Check(c *gin.Context)            { a.run(c, "check") }
+func (a *PracticeAPI) List(c *gin.Context)             { a.run(c, "list") }
+func (a *PracticeAPI) Save(c *gin.Context)             { a.run(c, "save") }
+func (a *PracticeAPI) Dismiss(c *gin.Context)          { a.run(c, "dismiss") }
+func (a *PracticeAPI) Start(c *gin.Context)            { a.run(c, "start") }
+func (a *PracticeAPI) News(c *gin.Context)             { a.run(c, "news") }
+func (a *PracticeAPI) ReadNews(c *gin.Context)         { a.run(c, "read_news") }
 func (a *PracticeAPI) run(c *gin.Context, action string) {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {
 		return
 	}
 	body := map[string]any{}
-	if action != "list" && action != "news" {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16000)
+	if action != "list" && action != "news" && action != "sd_list" {
+		limit := int64(16000)
+		if action == "sd_save" {
+			limit = 128000
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
 		if c.ShouldBindJSON(&body) != nil {
 			c.JSON(400, gin.H{"error": "Некорректный запрос"})
 			return
