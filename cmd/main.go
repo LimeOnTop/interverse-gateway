@@ -225,6 +225,7 @@ func main() {
 			payments.POST("/robokassa/result", paymentAPI.RobokassaResult)
 			payments.GET("/robokassa/result", paymentAPI.RobokassaResult)
 			payments.GET("/offers", paymentAPI.GetOffers)
+			payments.GET("/account-offers", requireAuth, paymentAPI.GetAccountOffers)
 			payments.POST("/", requireAuth, paymentAPI.CreatePayment)
 			payments.GET("/history", requireAuth, paymentAPI.History)
 			payments.GET("/renewal", requireAuth, paymentAPI.GetRenewal)

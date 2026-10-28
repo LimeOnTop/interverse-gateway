@@ -9,7 +9,7 @@ import (
 // PaymentGateway is the backend port consumed by HTTP controllers.
 type PaymentGateway interface {
 	CreatePayment(ctx context.Context, userID, plan, email string) (*pb.CreatePaymentResponse, error)
-	GetOffers(ctx context.Context) (*pb.GetOffersResponse, error)
+	GetOffers(ctx context.Context, userID string) (*pb.GetOffersResponse, error)
 	ConfirmResult(
 		ctx context.Context,
 		outSum string,

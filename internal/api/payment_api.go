@@ -110,8 +110,19 @@ func (a *PaymentAPI) CreatePayment(c *gin.Context) {
 	})
 }
 
-func (a *PaymentAPI) GetOffers(c *gin.Context) {
-	resp, err := a.paymentClient.GetOffers(c.Request.Context())
+func (a *PaymentAPI) GetOffers(c *gin.Context) { a.offers(c, "") }
+
+func (a *PaymentAPI) GetAccountOffers(c *gin.Context) {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return
+	}
+	a.offers(c, user.ID)
+}
+
+func (a *PaymentAPI) offers(c *gin.Context, userID string) {
+	c.Header("Cache-Control", "no-store")
+	resp, err := a.paymentClient.GetOffers(c.Request.Context(), userID)
 	if err != nil {
 		apperr.Internal(c, err)
 		return
@@ -140,6 +151,8 @@ func (a *PaymentAPI) GetOffers(c *gin.Context) {
 		"offers":               offers,
 		"early_bird_remaining": resp.GetEarlyBirdRemaining(),
 		"early_bird_limit":     resp.GetEarlyBirdLimit(),
+		"discount_expires_at":  resp.GetDiscountExpiresAt(),
+		"server_time":          resp.GetServerTime(),
 	})
 }
 

@@ -25,8 +25,8 @@ func (c *PaymentClient) CreatePayment(ctx context.Context, userID, plan, email s
 	})
 }
 
-func (c *PaymentClient) GetOffers(ctx context.Context) (*pb.GetOffersResponse, error) {
-	return c.client.GetOffers(ctx, &pb.GetOffersRequest{})
+func (c *PaymentClient) GetOffers(ctx context.Context, userID string) (*pb.GetOffersResponse, error) {
+	return c.client.GetOffers(ctx, &pb.GetOffersRequest{UserId: userID})
 }
 
 func (c *PaymentClient) ConfirmResult(
