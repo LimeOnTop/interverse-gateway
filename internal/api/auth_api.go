@@ -348,7 +348,7 @@ func (a *AuthAPI) BeginEmailChange(c *gin.Context) {
 	}
 	var req struct {
 		Email           string `json:"email" binding:"required,email"`
-		CurrentPassword string `json:"current_password" binding:"required"`
+		CurrentPassword string `json:"current_password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apperr.Bind(c, err)
