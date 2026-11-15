@@ -64,6 +64,7 @@ func main() {
 	vacancyAPI := api.NewVacancyAPI(vacancyClient)
 	publicJobsAPI := api.NewPublicJobsAPI(accessRedis, vacancyClient, "./public-seo")
 	paymentAPI := api.NewPaymentAPI(paymentClient)
+	feedbackAPI := api.NewFeedbackAPI(clients.NewFeedbackClient(cfg.ProfileServiceURL))
 	supportAPI := api.NewSupportAPI(supportClient)
 	adminSupportAPI := api.NewAdminSupportAPI(supportClient)
 	dashboardAPI := api.NewDashboardAPI(interviewClient, reportClient, authClient)
@@ -184,10 +185,13 @@ func main() {
 			contributions.POST("/questions", contributionAPI.SubmitQuestion)
 		}
 
+		v1.POST("/feedback", requireAuth, feedbackAPI.Submit)
+
 		admin := v1.Group("/admin")
 		admin.Use(requireAuth, middleware.AdminRequired())
 		{
 			admin.GET("/stats", adminAPI.Stats)
+			admin.GET("/feedback", feedbackAPI.List)
 			admin.GET("/users", adminAPI.ListUsers)
 			admin.GET("/metrics", adminAPI.Metrics)
 			admin.GET("/questions", adminAPI.ListQuestions)
