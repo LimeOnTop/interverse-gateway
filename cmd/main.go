@@ -193,6 +193,7 @@ func main() {
 			admin.GET("/stats", adminAPI.Stats)
 			admin.GET("/feedback", feedbackAPI.List)
 			admin.GET("/users", adminAPI.ListUsers)
+			admin.GET("/operations", adminAPI.ListOperations)
 			admin.GET("/metrics", adminAPI.Metrics)
 			admin.GET("/questions", adminAPI.ListQuestions)
 			admin.GET("/moderation/questions", adminAPI.ListModerationQuestions)

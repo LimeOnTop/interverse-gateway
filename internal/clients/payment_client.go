@@ -60,3 +60,7 @@ func (c *PaymentClient) GetRenewal(ctx context.Context, id string) (*pb.RenewalR
 func (c *PaymentClient) SetRenewal(ctx context.Context, id string, enabled bool) (*pb.RenewalResponse, error) {
 	return c.client.SetRenewal(ctx, &pb.SetRenewalRequest{UserId: id, Enabled: enabled})
 }
+
+func (c *PaymentClient) ListOperations(ctx context.Context, beforeID int64) (*pb.ListOperationsResponse, error) {
+	return c.client.ListOperations(ctx, &pb.ListOperationsRequest{BeforeId: beforeID})
+}

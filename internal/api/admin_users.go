@@ -53,7 +53,7 @@ func (a *AdminAPI) ListUsers(c *gin.Context) {
 	// Hand-build public DTOs so protobuf additions can never expose credentials.
 	users := make([]gin.H, 0, len(resp.GetUsers()))
 	for _, u := range resp.GetUsers() {
-		users = append(users, gin.H{"id": u.GetId(), "name": u.GetName(), "email": u.GetEmail(), "created_at": u.GetCreatedAt()})
+		users = append(users, gin.H{"id": u.GetId(), "name": u.GetName(), "email": u.GetEmail(), "created_at": u.GetCreatedAt(), "subscription_plan": u.GetSubscriptionPlan(), "subscription_expires_at": u.GetSubscriptionExpiresAt()})
 	}
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, gin.H{"users": users, "pagination": gin.H{"total": resp.GetTotal(), "page": resp.GetPage(), "limit": resp.GetLimit()}, "period": c.DefaultQuery("period", "total")})
